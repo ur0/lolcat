@@ -46,7 +46,7 @@ fn parse_cli_args() -> cat::Control {
     let frequency: f64 = frequency.parse().unwrap();
 
     if seed == 0.0 {
-        seed = rand::random::<f64>();
+        seed = rand::random::<f64>() * 10e9;
     }
 
     cat::Control {
