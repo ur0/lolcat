@@ -24,15 +24,18 @@ fn parse_cli_args() -> cat::Control {
         .arg(Arg::with_name("seed")
             .short("s")
             .long("seed")
-            .help("A seed for your lolcat. Setting this to 0 randomizes the seed."))
+            .help("A seed for your lolcat. Setting this to 0 randomizes the seed.")
+            .takes_value(true))
         .arg(Arg::with_name("spread")
             .short("S")
             .long("spread")
-            .help("How much should we spread dem colors? Defaults to 3.0"))
+            .help("How much should we spread dem colors? Defaults to 3.0")
+            .takes_value(true))
         .arg(Arg::with_name("frequency")
             .short("f")
             .long("frequency")
-            .help("Frequency - used in our math. Defaults to 0.1"))
+            .help("Frequency - used in our math. Defaults to 0.1")
+            .takes_value(true))
         .get_matches();
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
@@ -46,5 +49,9 @@ fn parse_cli_args() -> cat::Control {
         seed = rand::random::<f64>();
     }
 
-    cat::Control{seed: seed, spread: spread, frequency: frequency}
+    cat::Control {
+        seed: seed,
+        spread: spread,
+        frequency: frequency,
+    }
 }
