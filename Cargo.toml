@@ -1,0 +1,8 @@
+[package]
+name = "lolcat"
+version = "0.1.0"
+authors = ["Umang Raghuvanshi <u@umangis.me>"]
+
+[dependencies]
+clap = "2.20"
+rand = "0.3"
