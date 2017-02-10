@@ -9,11 +9,13 @@ pub struct Control {
 
 // A wrapper around colored_print
 pub fn print_with_lolcat(s: String, c: &mut Control) {
+    let original_seed = c.seed;
     for character in s.chars() {
         c.seed += 1.0;
         colored_print(get_color_tuple(c), character);
     }
     print!("\n"); // A newline, because lines() gave us a single line without it
+    c.seed = original_seed; // Reset the seed
 }
 
 fn colored_print(colors: (u8, u8, u8), c: char) {

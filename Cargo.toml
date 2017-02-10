@@ -1,6 +1,6 @@
 [package]
 name = "lolcat"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Umang Raghuvanshi <u@umangis.me>"]
 description = "The good ol' lolcat, now with fearless concurrency."
 license = "MIT"
