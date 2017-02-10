@@ -1,24 +1,43 @@
 use std::io;
-use std::io::prelude::*;
 
 extern crate clap;
 extern crate rand;
 use clap::{Arg, App};
+use std::io::BufReader;
+use std::io::BufRead;
+use std::fs::File;
 
 mod cat;
 
 fn main() {
-    let mut c = parse_cli_args();
+    let mut filename: String = "".to_string();
+    let mut c = parse_cli_args(&mut filename);
     let stdin = io::stdin(); // For lifetime reasons
 
-    for line in stdin.lock().lines() {
-        cat::print_with_lolcat(line.unwrap(), &mut c);
+    if filename == "" {
+        for line in stdin.lock().lines() {
+            cat::print_with_lolcat(line.unwrap(), &mut c);
+        }
+    } else {
+        match lolcat_file(&filename, &mut c) {
+            Err(_) => println!("Error opening file {}.", filename),
+            _ => {}
+        }
     }
 }
 
-fn parse_cli_args() -> cat::Control {
+fn lolcat_file(filename: &String, c: &mut cat::Control) -> Result<(), io::Error> {
+    let f = try!(File::open(filename));
+    let file = BufReader::new(&f);
+    for line in file.lines() {
+        cat::print_with_lolcat(line.unwrap(), c);
+    }
+    Ok(())
+}
+
+fn parse_cli_args(filename: &mut String) -> cat::Control {
     let matches = App::new("lolcat")
-        .version("0.1.0")
+        .version("0.1.1")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
         .arg(Arg::with_name("seed")
@@ -36,10 +55,17 @@ fn parse_cli_args() -> cat::Control {
             .long("frequency")
             .help("Frequency - used in our math. Defaults to 0.1")
             .takes_value(true))
+        .arg(Arg::with_name("filename")
+            .short("i")
+            .long("input file name")
+            .help("Lolcat this file. Reads from STDIN if missing")
+            .takes_value(true)
+            .index(1))
         .get_matches();
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
     let frequency = matches.value_of("frequency").unwrap_or("0.1");
+    *filename = matches.value_of("filename").unwrap_or("").to_string();
 
     let mut seed: f64 = seed.parse().unwrap();
     let spread: f64 = spread.parse().unwrap();
