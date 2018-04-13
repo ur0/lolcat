@@ -37,7 +37,7 @@ fn lolcat_file(filename: &String, c: &mut cat::Control) -> Result<(), io::Error>
 
 fn parse_cli_args(filename: &mut String) -> cat::Control {
     let matches = App::new("lolcat")
-        .version("0.1.1")
+        .version("1.0.1")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
         .arg(
