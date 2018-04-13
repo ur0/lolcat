@@ -1,0 +1,17 @@
+name: lolcat-rs
+version: '1.0.1'
+summary: Lolcat adds color to your life.
+description: |
+  Lolcat-rs is the Rust re-implementation of the original lolcat. It is
+  fast, beautiful and does not have *any* dependencies.
+apps:
+        lolcat-rs:
+                command: bin/lolcat
+
+grade: stable
+confinement: strict
+
+parts:
+  lolcat:
+          source: https://github.com/ur0/lolcat.git
+          plugin: rust
