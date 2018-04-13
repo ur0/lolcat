@@ -1,11 +1,11 @@
 [package]
 name = "lolcat"
-version = "0.1.1"
+version = "1.0.0"
 authors = ["Umang Raghuvanshi <u@umangis.me>"]
 description = "The good ol' lolcat, now with fearless concurrency."
 license = "MIT"
 repository = "https://github.com/ur0/lolcat"
 
 [dependencies]
-clap = "2.20"
-rand = "0.3"
+clap = "2.31"
+rand = "0.4"

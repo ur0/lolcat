@@ -2,10 +2,10 @@ use std::io;
 
 extern crate clap;
 extern crate rand;
-use clap::{Arg, App};
-use std::io::BufReader;
-use std::io::BufRead;
+use clap::{App, Arg};
 use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
 
 mod cat;
 
@@ -40,27 +40,35 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         .version("0.1.1")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
-        .arg(Arg::with_name("seed")
-            .short("s")
-            .long("seed")
-            .help("A seed for your lolcat. Setting this to 0 randomizes the seed.")
-            .takes_value(true))
-        .arg(Arg::with_name("spread")
-            .short("S")
-            .long("spread")
-            .help("How much should we spread dem colors? Defaults to 3.0")
-            .takes_value(true))
-        .arg(Arg::with_name("frequency")
-            .short("f")
-            .long("frequency")
-            .help("Frequency - used in our math. Defaults to 0.1")
-            .takes_value(true))
-        .arg(Arg::with_name("filename")
-            .short("i")
-            .long("input file name")
-            .help("Lolcat this file. Reads from STDIN if missing")
-            .takes_value(true)
-            .index(1))
+        .arg(
+            Arg::with_name("seed")
+                .short("s")
+                .long("seed")
+                .help("A seed for your lolcat. Setting this to 0 randomizes the seed.")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("spread")
+                .short("S")
+                .long("spread")
+                .help("How much should we spread dem colors? Defaults to 3.0")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("frequency")
+                .short("f")
+                .long("frequency")
+                .help("Frequency - used in our math. Defaults to 0.1")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("filename")
+                .short("i")
+                .long("input file name")
+                .help("Lolcat this file. Reads from STDIN if missing")
+                .takes_value(true)
+                .index(1),
+        )
         .get_matches();
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
