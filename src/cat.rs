@@ -27,6 +27,11 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
         }
 
         c.seed += 1.0;
+
+        if character == ' ' {
+            print!(" ");
+            continue;
+        }
         colored_print(get_color_tuple(c), character);
     }
     print!("\n"); // A newline, because lines() gave us a single line without it
