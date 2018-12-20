@@ -62,6 +62,20 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("background")
+                .short("B")
+                .long("bg")
+                .help("Background mode - If selected the background will be rainbow. Default false")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("dialup")
+                .short("D")
+                .long("dialup")
+                .help("Dialup mode - Simulate dialup connection")
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name("filename")
                 .short("i")
                 .long("input file name")
@@ -70,9 +84,13 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
                 .index(1),
         )
         .get_matches();
+
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
     let frequency = matches.value_of("frequency").unwrap_or("0.1");
+    let background = matches.is_present("background");
+    let dialup = matches.is_present("dialup");
+
     *filename = matches.value_of("filename").unwrap_or("").to_string();
 
     let mut seed: f64 = seed.parse().unwrap();
@@ -87,5 +105,7 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         seed: seed,
         spread: spread,
         frequency: frequency,
+        background_mode: background,
+        dialup_mode: dialup,
     }
 }
