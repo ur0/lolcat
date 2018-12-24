@@ -1,11 +1,13 @@
-use std::io;
-
 extern crate clap;
 extern crate rand;
 use clap::{App, Arg};
+use rand::Rng;
 use std::fs::File;
+use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::thread::sleep;
+use std::time::Duration;
 
 mod cat;
 
@@ -17,6 +19,10 @@ fn main() {
     if filename == "" {
         for line in stdin.lock().lines() {
             cat::print_with_lolcat(line.unwrap(), &mut c);
+            if c.dialup_mode {
+                let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 200));
+                sleep(stall);
+            }
         }
     } else {
         match lolcat_file(&filename, &mut c) {
@@ -31,6 +37,11 @@ fn lolcat_file(filename: &String, c: &mut cat::Control) -> Result<(), io::Error>
     let file = BufReader::new(&f);
     for line in file.lines() {
         cat::print_with_lolcat(line.unwrap(), c);
+
+        if c.dialup_mode {
+            let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
+            sleep(stall);
+        }
     }
     Ok(())
 }

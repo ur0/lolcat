@@ -1,10 +1,6 @@
 extern crate rand;
 
 use std;
-use std::thread::sleep;
-use std::time::Duration;
-
-use rand::Rng;
 
 // A struct to contain info we need to print with every character
 pub struct Control {
@@ -36,18 +32,9 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
 
         c.seed += 1.0;
 
-        if c.dialup_mode && character.is_whitespace() {
-            let stall = Duration::from_millis(rand::thread_rng().gen_range(0, 30));
-            sleep(stall);
-        }
-
         if c.background_mode {
             let bg = get_color_tuple(c);
-            let fg = if conv_grayscale(bg) > 0xA0_u8 {
-                (0u8, 0u8, 0u8)
-            } else {
-                (0xffu8, 0xffu8, 0xffu8)
-            };
+            let fg = calc_fg_color(bg);
             colored_print(fg, bg, character);
         } else {
             let fg = get_color_tuple(c);
@@ -58,6 +45,17 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
 
     print!("\n"); // A newline, because lines() gave us a single line without it
     c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
+}
+
+fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
+    // Currently, it only computes the forground clolor based on some threshold
+    // on grayscale value.
+    // TODO: Add a better algorithm for computing forground color
+    if conv_grayscale(bg) > 0xA0_u8 {
+        (0u8, 0u8, 0u8)
+    } else {
+        (0xffu8, 0xffu8, 0xffu8)
+    }
 }
 
 fn linear_to_srgb(intensity: f64) -> f64 {
@@ -78,7 +76,7 @@ fn srgb_to_linear(intensity: f64) -> f64 {
 
 fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
     // See https://en.wikipedia.org/wiki/Grayscale#Converting_color_to_grayscale
-    const SCALE : f64 = 256.0;
+    const SCALE: f64 = 256.0;
 
     // Changing SRGB to Linear for gamma correction
     let red = srgb_to_linear((color.0 as f64) / SCALE);
