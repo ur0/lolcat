@@ -15,6 +15,7 @@ pub struct Control {
 pub fn print_with_lolcat(s: String, c: &mut Control) {
     let original_seed = c.seed;
     let mut skipping = false;
+    let mut whitespace_after_newline = true;
 
     for character in s.chars() {
         // Strip out any color chars
@@ -27,6 +28,15 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
             continue;
         }
         if skipping {
+            continue;
+        }
+
+        if !character.is_whitespace() {
+            whitespace_after_newline = false;
+        }
+
+        if whitespace_after_newline {
+            print!("{}", character);
             continue;
         }
 
