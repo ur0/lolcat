@@ -7,5 +7,5 @@ license = "MIT"
 repository = "https://github.com/ur0/lolcat"
 
 [dependencies]
-clap = "^2"
-rand = "^0.5"
+clap = "2.32.0"
+rand = "0.6.1"
