@@ -2,13 +2,16 @@
 
 The good ol' lolcat, now with fearless concurrency.
 
+
+To install it, execute:
+
+```bash
+wapm install lolcat
+```
+
 ![Look at deez colors](https://github.com/wapm-packages/lolcat/raw/master/screenshot.png)
 
 Run lolcat on everything you like and you'll never have to wonder about the dullness of your life. See? It's that simple.
-
-## Installation
-
-Just run `wapm install lolcat`.
 
 ## License
 
