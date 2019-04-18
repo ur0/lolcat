@@ -1,3 +1,4 @@
+extern crate getrandom;
 extern crate rand;
 
 use std;
