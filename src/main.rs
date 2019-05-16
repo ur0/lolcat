@@ -24,15 +24,12 @@ fn main() {
                 sleep(stall);
             }
         }
-    } else {
-        match lolcat_file(&filename, &mut c) {
-            Err(_) => println!("Error opening file {}.", filename),
-            _ => {}
-        }
+    } else if lolcat_file(&filename, &mut c).is_err() {
+        println!("Error opening file {}.", filename)
     }
 }
 
-fn lolcat_file(filename: &String, c: &mut cat::Control) -> Result<(), io::Error> {
+fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     let f = try!(File::open(filename));
     let file = BufReader::new(&f);
     for line in file.lines() {
@@ -113,9 +110,9 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
     }
 
     cat::Control {
-        seed: seed,
-        spread: spread,
-        frequency: frequency,
+        seed,
+        spread,
+        frequency,
         background_mode: background,
         dialup_mode: dialup,
     }
