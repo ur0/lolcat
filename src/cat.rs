@@ -53,7 +53,7 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
         }
     }
 
-    print!("\n"); // A newline, because lines() gave us a single line without it
+    println!(); // A newline, because lines() gave us a single line without it
     c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
 }
 
@@ -69,7 +69,7 @@ fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
 }
 
 fn linear_to_srgb(intensity: f64) -> f64 {
-    if intensity <= 0.0031308 {
+    if intensity <= 0.003_130_8 {
         (12.92 * intensity)
     } else {
         (1.055 * intensity.powf(1.0 / 2.4) - 0.055)
@@ -89,9 +89,9 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
     const SCALE: f64 = 256.0;
 
     // Changing SRGB to Linear for gamma correction
-    let red = srgb_to_linear((color.0 as f64) / SCALE);
-    let green = srgb_to_linear((color.1 as f64) / SCALE);
-    let blue = srgb_to_linear((color.2 as f64) / SCALE);
+    let red = srgb_to_linear(f64::from(color.0) / SCALE);
+    let green = srgb_to_linear(f64::from(color.1) / SCALE);
+    let blue = srgb_to_linear(f64::from(color.2) / SCALE);
 
     // Converting to grayscale
     let gray_linear = red * 0.299 + green * 0.587 + blue * 0.114;
