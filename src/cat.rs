@@ -45,11 +45,10 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
         if c.background_mode {
             let bg = get_color_tuple(c);
             let fg = calc_fg_color(bg);
-            colored_print(fg, bg, character);
+            colored_print_with_background(fg, bg, character);
         } else {
             let fg = get_color_tuple(c);
-            let black = (0u8, 0u8, 0u8);
-            colored_print(fg, black, character);
+            colored_print(fg, character);
         }
     }
 
@@ -102,7 +101,11 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
     (gray_srgb * SCALE) as u8
 }
 
-fn colored_print(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
+fn colored_print(fg: (u8, u8, u8), c: char) {
+    print!("\x1b[38;2;{};{};{};48m{}\x1b[0m", fg.0, fg.1, fg.2, c);
+}
+
+fn colored_print_with_background(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
     print!(
         "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m",
         fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, c
