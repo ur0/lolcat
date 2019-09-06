@@ -1,0 +1,15 @@
+[package]
+name = "lolcat"
+version = "0.1.1"
+description = "Rainbows and unicorns!"
+readme = "README.md"
+repository = "https://github.com/wapm-packages/lolcat"
+
+[[module]]
+name = "lolcat"
+source = "target/wasm32-unknown-wasi/release/lolcat.wasm"
+abi = "wasi"
+
+[[command]]
+name = "lolcat"
+module = "lolcat"

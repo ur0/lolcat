@@ -1,4 +1,5 @@
 extern crate clap;
+extern crate getrandom;
 extern crate rand;
 use clap::{App, Arg};
 use rand::Rng;
