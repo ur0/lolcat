@@ -102,7 +102,7 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
 }
 
 fn colored_print(fg: (u8, u8, u8), c: char) {
-    print!("\x1b[38;2;{};{};{};48m{}\x1b[0m", fg.0, fg.1, fg.2, c);
+    print!("\x1b[38;2;{};{};{}m{}\x1b[0m", fg.0, fg.1, fg.2, c);
 }
 
 fn colored_print_with_background(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
