@@ -30,7 +30,7 @@ fn main() {
 }
 
 fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
-    let f = File::open(filename)?;
+    let f = try!(File::open(filename));
     let file = BufReader::new(&f);
     for line in file.lines() {
         cat::print_with_lolcat(line.unwrap(), c);
@@ -44,7 +44,7 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
 }
 
 fn parse_cli_args(filename: &mut String) -> cat::Control {
-    let matches = App::new("lolcat")
+    let app = App::new("lolcat")
         .version("1.0.1")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
@@ -90,7 +90,10 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
                 .help("Lolcat this file. Reads from STDIN if missing")
                 .takes_value(true)
                 .index(1),
-        )
+        );
+    let new_help = rainbowize_help(&app);
+    let matches = app
+        .help(new_help.as_str()) // Set here for lifetimes reasons
         .get_matches();
 
     let seed = matches.value_of("seed").unwrap_or("0.0");
@@ -116,4 +119,30 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         background_mode: background,
         dialup_mode: dialup,
     }
+}
+
+fn rainbowize_help<'a, 'b>(app: &App<'a, 'b>) -> String {
+    let mut old_help = Vec::new();
+    app.write_help(&mut old_help).unwrap();
+    let old_help = String::from_utf8(old_help).unwrap();
+
+    let mut new_help = Vec::new();
+    let mut c = cat::Control {
+        seed: rand::random::<f64>() * 10e9,
+        spread: 3.0,
+        frequency: 0.1,
+        background_mode: false,
+        dialup_mode: false,
+    };
+
+    for i in old_help.lines() {
+        cat::write_with_lolcat(
+            &mut new_help,
+            String::from(i), // extra-copy made here :/
+            &mut c
+        )
+        .unwrap();
+    }
+
+    String::from_utf8(new_help).unwrap()
 }
