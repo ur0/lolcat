@@ -30,7 +30,7 @@ fn main() {
 }
 
 fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
-    let f = try!(File::open(filename));
+    let f = File::open(filename)?;
     let file = BufReader::new(&f);
     for line in file.lines() {
         cat::print_with_lolcat(line.unwrap(), c);
