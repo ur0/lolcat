@@ -1,5 +1,5 @@
 name: lolcat-rs
-version: '1.1.0'
+version: '1.2.0'
 summary: Lolcat adds color to your life.
 description: |
   Lolcat-rs is the Rust re-implementation of the original lolcat. It is
