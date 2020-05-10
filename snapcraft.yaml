@@ -1,6 +1,7 @@
 name: lolcat-rs
 version: '1.2.0'
 summary: Lolcat adds color to your life.
+base: core18
 description: |
   Lolcat-rs is the Rust re-implementation of the original lolcat. It is
   fast, beautiful and does not have *any* dependencies.
