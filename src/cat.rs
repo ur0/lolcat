@@ -11,8 +11,13 @@ pub struct Control {
     pub dialup_mode: bool,
 }
 
-// A wrapper around colored_print
+// A wrapper around write_with_lolcat
 pub fn print_with_lolcat(s: String, c: &mut Control) {
+    write_with_lolcat(std::io::stdout(), s, c).unwrap();
+}
+
+// A wrapper around colored_write
+pub fn write_with_lolcat<T: std::io::Write>(mut w: T, s: String, c: &mut Control) -> std::io::Result<()> {
     let original_seed = c.seed;
     let mut skipping = false;
     let mut whitespace_after_newline = true;
@@ -36,7 +41,7 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
         }
 
         if whitespace_after_newline {
-            print!("{}", character);
+            write!(w, "{}", character)?;
             continue;
         }
 
@@ -45,15 +50,17 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
         if c.background_mode {
             let bg = get_color_tuple(c);
             let fg = calc_fg_color(bg);
-            colored_print_with_background(fg, bg, character);
+            colored_write_with_background(&mut w, fg, bg, character)?;
         } else {
             let fg = get_color_tuple(c);
-            colored_print(fg, character);
+            colored_write(&mut w, fg, character)?;
         }
     }
 
-    println!(); // A newline, because lines() gave us a single line without it
+    writeln!(w)?; // A newline, because lines() gave us a single line without it
     c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
+
+    Ok(())
 }
 
 fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
@@ -101,15 +108,32 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
     (gray_srgb * SCALE) as u8
 }
 
-fn colored_print(fg: (u8, u8, u8), c: char) {
-    print!("\x1b[38;2;{};{};{}m{}\x1b[0m", fg.0, fg.1, fg.2, c);
+fn colored_write<T>(mut w: T, fg: (u8, u8, u8), c: char) -> std::io::Result<()>
+where
+    T: std::io::Write
+{
+    write!(w, "\x1b[38;2;{};{};{}m{}\x1b[0m", fg.0, fg.1, fg.2, c)
 }
 
-fn colored_print_with_background(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
-    print!(
+fn colored_write_with_background<T>(mut w: T, fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) -> std::io::Result<()>
+where
+    T: std::io::Write
+{
+    write!(
+        w,
         "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m",
         fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, c
-    );
+    )
+}
+
+// Kept alive but no longer useful
+fn colored_print(fg: (u8, u8, u8), c: char) {
+    colored_write(std::io::stdout(), fg, c).unwrap();
+}
+
+// Kept alive but no longer useful
+fn colored_print_with_background(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
+    colored_write_with_background(std::io::stdout(), fg, bg, c).unwrap();
 }
 
 fn get_color_tuple(c: &Control) -> (u8, u8, u8) {
