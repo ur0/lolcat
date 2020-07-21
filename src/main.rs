@@ -1,5 +1,7 @@
+extern crate atty;
 extern crate clap;
 extern crate rand;
+
 use clap::{App, Arg};
 use rand::Rng;
 use std::fs::File;
