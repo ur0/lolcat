@@ -69,6 +69,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "lolcat"
 version = "1.2.0"
 dependencies = [
+ "atty 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

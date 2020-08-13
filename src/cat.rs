@@ -1,5 +1,6 @@
 extern crate rand;
 
+use atty::Stream;
 use std;
 
 // A struct to contain info we need to print with every character
@@ -16,6 +17,11 @@ pub fn print_with_lolcat(s: String, c: &mut Control) {
     let original_seed = c.seed;
     let mut skipping = false;
     let mut whitespace_after_newline = true;
+
+    if !atty::is(Stream::Stdout) {
+        println!("{}", s);
+        return;
+    }
 
     for character in s.chars() {
         // Strip out any color chars

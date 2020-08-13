@@ -9,3 +9,4 @@ repository = "https://github.com/ur0/lolcat"
 [dependencies]
 clap = "2.33.0"
 rand = "0.7.3"
+atty = "0.2"
