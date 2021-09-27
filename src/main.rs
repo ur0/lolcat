@@ -46,67 +46,7 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
 }
 
 fn parse_cli_args(filename: &mut String) -> cat::Control {
-    let matches = App::new("lolcat")
-        .version("1.0.2")
-        .author("Umang Raghuvanshi <u@umangis.me>")
-        .about("The good ol' lolcat, now with fearless concurrency.")
-        .arg(
-            Arg::with_name("seed")
-                .short("s")
-                .long("seed")
-                .help("A seed for your lolcat. Setting this to 0 randomizes the seed.")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("spread")
-                .short("S")
-                .long("spread")
-                .help("How much should we spread dem colors? Defaults to 3.0")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("frequency")
-                .short("f")
-                .long("frequency")
-                .help("Frequency - used in our math. Defaults to 0.1")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("background")
-                .short("B")
-                .long("bg")
-                .help("Background mode - If selected the background will be rainbow. Default false")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("dialup")
-                .short("D")
-                .long("dialup")
-                .help("Dialup mode - Simulate dialup connection")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::with_name("filename")
-                .short("i")
-                .long("input file name")
-                .help("Lolcat this file. Reads from STDIN if missing")
-                .takes_value(true)
-                .index(1),
-        )
-        .arg(
-            Arg::with_name("help")
-                .short("h")
-                .long("help")
-                .help("Prints help information")
-                .takes_value(false)
-        )
-        .arg(
-            Arg::with_name("version")
-                .short("V")
-                .long("version")
-                .help("Prints version information")
-                .takes_value(false)
-        )
+    let matches = lolcat_clap_app()
         .get_matches();
 
     if matches.is_present("help") {
@@ -144,7 +84,34 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 }
 
 fn print_rainbow_help(only_version: bool) {
-    let app = App::new("lolcat")
+    let app = lolcat_clap_app();
+
+    let mut help = Vec::new();
+    if only_version {
+        app.write_version(&mut help).unwrap();
+    } else {
+        app.write_help(&mut help).unwrap();
+    }
+    let help = String::from_utf8(help).unwrap();
+
+    let mut default_settings = cat::Control {
+        seed: rand::random::<f64>() * 10e9,
+        spread: 3.0,
+        frequency: 0.1,
+        background_mode: false,
+        dialup_mode: false,
+    };
+
+    for line in help.lines() {
+        cat::print_with_lolcat(
+            line.to_string(),
+            &mut default_settings
+        );
+    }
+}
+
+fn lolcat_clap_app() -> App<'static, 'static> {
+    App::new("lolcat")
         .version("1.0.2")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
@@ -204,28 +171,5 @@ fn print_rainbow_help(only_version: bool) {
                 .long("version")
                 .help("Prints version information")
                 .takes_value(false)
-        );
-
-    let mut help = Vec::new();
-    if only_version {
-        app.write_version(&mut help).unwrap();
-    } else {
-        app.write_help(&mut help).unwrap();
-    }
-    let help = String::from_utf8(help).unwrap();
-
-    let mut default_settings = cat::Control {
-        seed: rand::random::<f64>() * 10e9,
-        spread: 3.0,
-        frequency: 0.1,
-        background_mode: false,
-        dialup_mode: false,
-    };
-
-    for line in help.lines() {
-        cat::print_with_lolcat(
-            line.to_string(),
-            &mut default_settings
-        );
-    }
+        )
 }
