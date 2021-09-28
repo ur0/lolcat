@@ -75,15 +75,15 @@ fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
 
 fn linear_to_srgb(intensity: f64) -> f64 {
     if intensity <= 0.003_130_8 {
-        (12.92 * intensity)
+        12.92 * intensity
     } else {
-        (1.055 * intensity.powf(1.0 / 2.4) - 0.055)
+        1.055 * intensity.powf(1.0 / 2.4) - 0.055
     }
 }
 
 fn srgb_to_linear(intensity: f64) -> f64 {
     if intensity < 0.04045 {
-        (intensity / 12.92)
+        intensity / 12.92
     } else {
         ((intensity + 0.055) / 1.055).powf(2.4)
     }

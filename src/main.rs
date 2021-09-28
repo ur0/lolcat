@@ -46,8 +46,73 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
 }
 
 fn parse_cli_args(filename: &mut String) -> cat::Control {
-    let matches = App::new("lolcat")
-        .version("1.0.1")
+    let matches = lolcat_clap_app()
+        .get_matches();
+
+    if matches.is_present("help") {
+        print_rainbow_help(false);
+        std::process::exit(0);
+    }
+    if matches.is_present("version") {
+        print_rainbow_help(true);
+        std::process::exit(0);
+    }
+
+    let seed = matches.value_of("seed").unwrap_or("0.0");
+    let spread = matches.value_of("spread").unwrap_or("3.0");
+    let frequency = matches.value_of("frequency").unwrap_or("0.1");
+    let background = matches.is_present("background");
+    let dialup = matches.is_present("dialup");
+
+    *filename = matches.value_of("filename").unwrap_or("").to_string();
+
+    let mut seed: f64 = seed.parse().unwrap();
+    let spread: f64 = spread.parse().unwrap();
+    let frequency: f64 = frequency.parse().unwrap();
+
+    if seed == 0.0 {
+        seed = rand::random::<f64>() * 10e9;
+    }
+
+    cat::Control {
+        seed,
+        spread,
+        frequency,
+        background_mode: background,
+        dialup_mode: dialup,
+    }
+}
+
+fn print_rainbow_help(only_version: bool) {
+    let app = lolcat_clap_app();
+
+    let mut help = Vec::new();
+    if only_version {
+        app.write_version(&mut help).unwrap();
+    } else {
+        app.write_help(&mut help).unwrap();
+    }
+    let help = String::from_utf8(help).unwrap();
+
+    let mut default_settings = cat::Control {
+        seed: rand::random::<f64>() * 10e9,
+        spread: 3.0,
+        frequency: 0.1,
+        background_mode: false,
+        dialup_mode: false,
+    };
+
+    for line in help.lines() {
+        cat::print_with_lolcat(
+            line.to_string(),
+            &mut default_settings
+        );
+    }
+}
+
+fn lolcat_clap_app() -> App<'static, 'static> {
+    App::new("lolcat")
+        .version("1.0.2")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
         .arg(
@@ -93,29 +158,18 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
                 .takes_value(true)
                 .index(1),
         )
-        .get_matches();
-
-    let seed = matches.value_of("seed").unwrap_or("0.0");
-    let spread = matches.value_of("spread").unwrap_or("3.0");
-    let frequency = matches.value_of("frequency").unwrap_or("0.1");
-    let background = matches.is_present("background");
-    let dialup = matches.is_present("dialup");
-
-    *filename = matches.value_of("filename").unwrap_or("").to_string();
-
-    let mut seed: f64 = seed.parse().unwrap();
-    let spread: f64 = spread.parse().unwrap();
-    let frequency: f64 = frequency.parse().unwrap();
-
-    if seed == 0.0 {
-        seed = rand::random::<f64>() * 10e9;
-    }
-
-    cat::Control {
-        seed,
-        spread,
-        frequency,
-        background_mode: background,
-        dialup_mode: dialup,
-    }
+        .arg(
+            Arg::with_name("help")
+                .short("h")
+                .long("help")
+                .help("Prints help information")
+                .takes_value(false)
+        )
+        .arg(
+            Arg::with_name("version")
+                .short("V")
+                .long("version")
+                .help("Prints version information")
+                .takes_value(false)
+        )
 }
