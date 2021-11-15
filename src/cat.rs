@@ -24,58 +24,90 @@ pub fn print_lines_lol<I : Iterator<Item=S>, S : AsRef<str>>(lines: I, c: &mut C
             sleep(stall);
         }
     }
-
-    // Reset the foreground color, since we are at the end of the output
-    print!("\x1b[39m");
 }
 
-// Takes in s a string of characters terminated by an implicit newline
-// prints them using colored_print
-// TODO Ignores most escape sequences
+// Takes in s a string of characters
+// prints them using colored_print, and a newline at the end
+// Ignores most escape sequences
 // TODO Adds the color to a color escape sequence
 fn print_line_lol(s: &str, c: &mut Control) {
     let original_seed = c.seed;
-    let mut skipping = false;
-    let mut whitespace_after_newline = true;
+    let mut ignore_whitespace = c.background_mode;
 
     if !atty::is(Stream::Stdout) {
         println!("{}", s);
         return;
     }
 
-    for character in s.chars() {
-        // Strip out any color chars
+    let mut iter = s.chars();
+    while let Some(character) = iter.next() {
+        // Consume escape sequences
         if character == '\x1b' {
-            skipping = true;
-            continue;
-        }
-        if skipping && character == 'm' {
-            skipping = false;
-            continue;
-        }
-        if skipping {
-            continue;
+            // Escape sequences seem to be one of many different categories
+            // CSI sequences are \e \[ [bytes in 0x30-0x3F] [bytes in 0x20-0x2F] [final byte in 0x40-0x7E]
+            // nF Escape seq are \e [bytes in 0x20-0x2F] [byte in 0x30-0x7E]
+            // Fp Escape seq are \e [byte in 0x30-0x3F] [I have no idea, but `sl` creates one where the next byte is the end of the escape sequence, so assume that]
+            // Fe Escape seq are \e [byte in 0x40-0x5F] [I have no idea, '' though sl doesn't make one]
+            // Fs Escape seq are \e [byte in 0x60-0x7E] [I have no idea, '' though sl doesn't make one]
+            // Otherwise the next byte is the whole escape sequence (maybe? I can't exactly tell, but I will go with it)
+            // We will consume up to, but not through, the next printable character
+            // In addition, we print everything in the escape sequence, even if it is a color (that will be overriden)
+            print!("\x1b");
+            let mut escape_sequence_character = iter.next().expect("Escape character with no escape sequence after it");
+            print!("{}", escape_sequence_character);
+            match escape_sequence_character {
+            '[' => {
+                loop {
+                    escape_sequence_character = iter.next().expect("CSI escape sequence did not terminate");
+                    print!("{}", escape_sequence_character);
+                    match escape_sequence_character {
+                    '\x30' ..= '\x3F' => continue,
+                    '\x20' ..= '\x2F' => {
+                        loop {
+                            escape_sequence_character = iter.next().expect("CSI escape sequence did not terminate");
+                            print!("{}", escape_sequence_character);
+                            match escape_sequence_character {
+                            '\x20' ..= '\x2F' => continue,
+                            '\x40' ..= '\x7E' => break,
+                            _ => panic!("CSI escape sequence terminated with an incorrect value"),
+                            }
+                        }
+                        break;
+                    },
+                    '\x40' ..= '\x7E' => break,
+                    _ => panic!("CSI escape sequence terminated with an incorrect value"),
+                    }
+                }
+            },
+            '\x20' ..= '\x2F' => {
+                loop {
+                    escape_sequence_character = iter.next().expect("nF escape sequence did not terminate");
+                    print!("{}", escape_sequence_character);
+                    match escape_sequence_character {
+                    '\x20' ..= '\x2F' => continue,
+                    '\x30' ..= '\x7E' => break,
+                    _ => panic!("nF escape sequence terminated with an incorrect value"),
+                    }
+                }
+            },
+//            '\x30' ..= '\x3F' => panic!("Fp escape sequences are not supported"),
+//            '\x40' ..= '\x5F' => panic!("Fe escape sequences are not supported"),
+//            '\x60' ..= '\x7E' => panic!("Fs escape sequences are not supported"),
+            // be lazy and assume in all other cases we consume exactly 1 byte
+            _ => (),
+            }
         }
 
-        if !character.is_whitespace() {
-            whitespace_after_newline = false;
-        }
-
-        if whitespace_after_newline {
+        // In background mode, don't print colorful whitespace until the first printable character
+        if ignore_whitespace && character.is_whitespace() {
             print!("{}", character);
             continue;
-        }
-
-        c.seed += 1.0;
-
-        if c.background_mode {
-            let bg = get_color_tuple(c);
-            let fg = calc_fg_color(bg);
-            colored_print_with_background(fg, bg, character);
         } else {
-            let fg = get_color_tuple(c);
-            colored_print(fg, character);
+            ignore_whitespace = false;
         }
+
+        colored_print(character, c);
+        c.seed += 1.0;
     }
 
     // Reset the background color if we should, since otherwise it will bleed all the way to the
@@ -84,8 +116,11 @@ fn print_line_lol(s: &str, c: &mut Control) {
         print!("\x1b[49m");
     }
 
-    // Print a newline since one is implied
-    println!();
+    // Reset the foreground color, since we are at the end of the output, and print the last newline
+    // This has to happen here, rather than only at the end of the program, because otherwise
+    // newlines become weird
+    println!("\x1b[39m");
+
     c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
 }
 
@@ -134,15 +169,18 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
     (gray_srgb * SCALE) as u8
 }
 
-fn colored_print(fg: (u8, u8, u8), c: char) {
-    print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, c);
-}
-
-fn colored_print_with_background(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
-    print!(
-        "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
-        fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, c
-    );
+fn colored_print(character: char, c: &mut Control) {
+    if c.background_mode {
+        let bg = get_color_tuple(c);
+        let fg = calc_fg_color(bg);
+        print!(
+            "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
+            fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
+        );
+    } else {
+        let fg = get_color_tuple(c);
+        print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
+    }
 }
 
 fn get_color_tuple(c: &Control) -> (u8, u8, u8) {
