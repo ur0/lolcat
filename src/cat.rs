@@ -25,15 +25,11 @@ pub fn print_lines_lol<I : Iterator<Item=S>, S : AsRef<str>>(lines: I, c: &mut C
         }
     }
 
-    // Reset the foreground (and maybe background) colors
-    if c.background_mode {
-        print!("\x1b[39;49m");
-    } else {
-        print!("\x1b[39m");
-    }
+    // Reset the foreground color, since we are at the end of the output
+    print!("\x1b[39m");
 }
 
-// Takes in s, which should be a string of characters terminated by an implicit newline
+// Takes in s a string of characters terminated by an implicit newline
 // prints them using colored_print
 // TODO Ignores most escape sequences
 // TODO Adds the color to a color escape sequence
@@ -80,6 +76,12 @@ fn print_line_lol(s: &str, c: &mut Control) {
             let fg = get_color_tuple(c);
             colored_print(fg, character);
         }
+    }
+
+    // Reset the background color if we should, since otherwise it will bleed all the way to the
+    // end of the terminal
+    if c.background_mode {
+        print!("\x1b[49m");
     }
 
     // Print a newline since one is implied
