@@ -115,7 +115,7 @@ fn print_rainbow_help(only_version: bool) {
 
 fn lolcat_clap_app() -> App<'static, 'static> {
     App::new("lolcat")
-        .version("1.0.2")
+        .version("1.3.2")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
         .arg(
