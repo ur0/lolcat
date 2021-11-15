@@ -20,7 +20,7 @@ fn main() {
 
     if filename == "" {
         for line in stdin.lock().lines() {
-            cat::print_with_lolcat(line.unwrap(), &mut c);
+            cat::print_line_lol(line.unwrap(), &mut c);
             if c.dialup_mode {
                 let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 200));
                 sleep(stall);
@@ -35,7 +35,7 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     let f = File::open(filename)?;
     let file = BufReader::new(&f);
     for line in file.lines() {
-        cat::print_with_lolcat(line.unwrap(), c);
+        cat::print_line_lol(line.unwrap(), c);
 
         if c.dialup_mode {
             let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
@@ -103,7 +103,7 @@ fn print_rainbow_help(only_version: bool) {
     };
 
     for line in help.lines() {
-        cat::print_with_lolcat(
+        cat::print_line_lol(
             line.to_string(),
             &mut default_settings
         );

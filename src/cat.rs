@@ -12,8 +12,11 @@ pub struct Control {
     pub dialup_mode: bool,
 }
 
-// A wrapper around colored_print
-pub fn print_with_lolcat(s: String, c: &mut Control) {
+// Takes in s, which should be a string of characters terminated by an implicit newline
+// prints them using colored_print
+// TODO Ignores most escape sequences
+// TODO Adds the color to a color escape sequence
+pub fn print_line_lol(s: String, c: &mut Control) {
     let original_seed = c.seed;
     let mut skipping = false;
     let mut whitespace_after_newline = true;
@@ -108,12 +111,12 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
 }
 
 fn colored_print(fg: (u8, u8, u8), c: char) {
-    print!("\x1b[38;2;{};{};{}m{}\x1b[0m", fg.0, fg.1, fg.2, c);
+    print!("\x1b[38;2;{};{};{}m{}\x1b[39m", fg.0, fg.1, fg.2, c);
 }
 
 fn colored_print_with_background(fg: (u8, u8, u8), bg: (u8, u8, u8), c: char) {
     print!(
-        "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[0m",
+        "\x1b[38;2;{};{};{};48;2;{};{};{}m{}\x1b[39;49m",
         fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, c
     );
 }
