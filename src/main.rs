@@ -3,13 +3,10 @@ extern crate clap;
 extern crate rand;
 
 use clap::{App, Arg};
-use rand::Rng;
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::thread::sleep;
-use std::time::Duration;
 
 mod cat;
 
@@ -19,13 +16,15 @@ fn main() {
     let stdin = io::stdin(); // For lifetime reasons
 
     if filename == "" {
-        for line in stdin.lock().lines() {
+/*        for line in stdin.lock().lines() {
             cat::print_line_lol(line.unwrap(), &mut c);
             if c.dialup_mode {
                 let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 200));
                 sleep(stall);
             }
         }
+*/
+        cat::print_lines_lol(stdin.lock().lines(), &mut c);
     } else if lolcat_file(&filename, &mut c).is_err() {
         println!("Error opening file {}.", filename)
     }
@@ -34,7 +33,7 @@ fn main() {
 fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     let f = File::open(filename)?;
     let file = BufReader::new(&f);
-    for line in file.lines() {
+/*    for line in file.lines() {
         cat::print_line_lol(line.unwrap(), c);
 
         if c.dialup_mode {
@@ -42,6 +41,8 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
             sleep(stall);
         }
     }
+*/
+    cat::print_lines_lol(file.lines(), &mut c);
     Ok(())
 }
 
@@ -102,12 +103,14 @@ fn print_rainbow_help(only_version: bool) {
         dialup_mode: false,
     };
 
-    for line in help.lines() {
+/*    for line in help.lines() {
         cat::print_line_lol(
             line.to_string(),
             &mut default_settings
         );
     }
+*/
+    cat::print_lines_lol(help.lines(), &mut default_settings);
 }
 
 fn lolcat_clap_app() -> App<'static, 'static> {
