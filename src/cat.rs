@@ -15,9 +15,9 @@ pub struct Control {
     pub dialup_mode: bool,
 }
 
-pub fn print_lines_lol(lines: ????????????????????????, c: &mut Control) {
+pub fn print_lines_lol<I : Iterator<Item=S>, S : AsRef<str>>(lines: I, c: &mut Control) {
     for line in lines {
-        print_line_lol(line.unwrap(), &mut c);
+        print_line_lol(line.as_ref(), c);
 
         if c.dialup_mode {
             let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
@@ -37,7 +37,7 @@ pub fn print_lines_lol(lines: ????????????????????????, c: &mut Control) {
 // prints them using colored_print
 // TODO Ignores most escape sequences
 // TODO Adds the color to a color escape sequence
-fn print_line_lol(s: String, c: &mut Control) {
+fn print_line_lol(s: &str, c: &mut Control) {
     let original_seed = c.seed;
     let mut skipping = false;
     let mut whitespace_after_newline = true;
