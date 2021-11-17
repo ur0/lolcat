@@ -8,8 +8,8 @@ use rand::Rng;
 use std::thread::sleep;
 use std::time::Duration;
 
-use std::io::Write;
 use std::io::stdout;
+use std::io::Write;
 
 // A struct to contain info we need to print with every character
 pub struct Control {
@@ -27,7 +27,9 @@ pub fn print_lines_lol<I: Iterator<Item=S>, S: AsRef<str>>(lines: I, c: &mut Con
     for line in lines {
         print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
     }
-    print!("\x1b[39m");
+    if !atty::is(Stream::Stdout) {
+        print!("\x1b[39m");
+    }
 }
 
 // Takes in s an iterator over characters
