@@ -21,18 +21,19 @@ pub struct Control {
 }
 
 // This used to have more of a reason to exist, however now all its functionality is in
-// print_chars_lol(). Anyway, it takes in an iterator over lines and prints them all.
+// print_chars_lol(). It takes in an iterator over lines and prints them all.
+// At the end, it resets the foreground color
 pub fn print_lines_lol<I: Iterator<Item=S>, S: AsRef<str>>(lines: I, c: &mut Control) {
     for line in lines {
         print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
     }
+    print!("\x1b[39m");
 }
 
 // Takes in s an iterator over characters
 // duplicates escape sequences, otherwise prints printable characters with colored_print
 // Print newlines correctly, resetting background
 // If constantly_flush is on, it won't wait till a newline to flush stdout
-// TODO Adds the color to a color escape sequence
 pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, constantly_flush: bool) {
     let original_seed = c.seed;
     let mut ignore_whitespace = c.background_mode;
@@ -101,29 +102,26 @@ pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, con
             // be lazy and assume in all other cases we consume exactly 1 byte
             _ => (),
             }
-            continue;
         },
         // Newlines print escape sequences to end background prints, and in dialup mode sleep, and
-        // reset the seed of the coloring
+        // reset the seed of the coloring and the value of ignore_whitespace
         '\n' => {
             if atty::is(Stream::Stdout) {
-                // Reset the background color if we should, since otherwise it will bleed all the way to the
-                // end of the terminal
+                // Reset the background color only, as we don't have to reset the foreground till
+                // the end of the program
+                // We reset the background here because otherwise it bleeds all the way to the next line
                 if c.background_mode {
                     print!("\x1b[49m");
                 }
-
-                // Reset the foreground color, since we are at the end of the output, and print the last newline
-                // This has to happen here, rather than only at the end of the program, because otherwise
-                // newlines become weird
-                print!("\x1b[39m");
             }
             println!();
             if c.dialup_mode {
                 let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
                 sleep(stall);
             }
+
             c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
+            ignore_whitespace = c.background_mode;
         },
         // If not an escape sequence or a newline, print a colorful escape sequence and then the
         // character
@@ -141,10 +139,38 @@ pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, con
         },
         }
 
-        // If we should constantly flush, flush after each completed sequence
+        // If we should constantly flush, flush after each completed sequence, and also reset
+        // colors because otherwise weird things happen
         if constantly_flush {
+            reset_colors(c);
             stdout().flush().unwrap();
         }
+    }
+}
+
+fn reset_colors(c: &Control) {
+    if atty::is(Stream::Stdout) {
+        // Reset the background color
+        if c.background_mode {
+            print!("\x1b[49m");
+        }
+
+        // Reset the foreground color
+        print!("\x1b[39m");
+    }
+}
+
+fn colored_print(character: char, c: &mut Control) {
+    if c.background_mode {
+        let bg = get_color_tuple(c);
+        let fg = calc_fg_color(bg);
+        print!(
+            "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
+            fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
+        );
+    } else {
+        let fg = get_color_tuple(c);
+        print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
     }
 }
 
@@ -191,20 +217,6 @@ fn conv_grayscale(color: (u8, u8, u8)) -> u8 {
     let gray_srgb = linear_to_srgb(gray_linear);
 
     (gray_srgb * SCALE) as u8
-}
-
-fn colored_print(character: char, c: &mut Control) {
-    if c.background_mode {
-        let bg = get_color_tuple(c);
-        let fg = calc_fg_color(bg);
-        print!(
-            "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
-            fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
-        );
-    } else {
-        let fg = get_color_tuple(c);
-        print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
-    }
 }
 
 fn get_color_tuple(c: &Control) -> (u8, u8, u8) {
