@@ -1,8 +1,5 @@
 extern crate rand;
 
-use atty::Stream;
-use std;
-
 use rand::Rng;
 
 use std::thread::sleep;
@@ -18,6 +15,7 @@ pub struct Control {
     pub frequency: f64,
     pub background_mode: bool,
     pub dialup_mode: bool,
+    pub print_color: bool,
 }
 
 // This used to have more of a reason to exist, however now all its functionality is in
@@ -27,7 +25,7 @@ pub fn print_lines_lol<I: Iterator<Item=S>, S: AsRef<str>>(lines: I, c: &mut Con
     for line in lines {
         print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
     }
-    if !atty::is(Stream::Stdout) {
+    if c.print_color {
         print!("\x1b[39m");
     }
 }
@@ -40,9 +38,9 @@ pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, con
     let original_seed = c.seed;
     let mut ignore_whitespace = c.background_mode;
 
-    if !atty::is(Stream::Stdout) {
-        for s in iter {
-            print!("{}", s);
+    if !c.print_color {
+        for character in iter {
+            print!("{}", character);
         }
         return;
     }
@@ -108,7 +106,7 @@ pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, con
         // Newlines print escape sequences to end background prints, and in dialup mode sleep, and
         // reset the seed of the coloring and the value of ignore_whitespace
         '\n' => {
-            if atty::is(Stream::Stdout) {
+            if c.print_color {
                 // Reset the background color only, as we don't have to reset the foreground till
                 // the end of the program
                 // We reset the background here because otherwise it bleeds all the way to the next line
@@ -151,7 +149,7 @@ pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, con
 }
 
 fn reset_colors(c: &Control) {
-    if atty::is(Stream::Stdout) {
+    if c.print_color {
         // Reset the background color
         if c.background_mode {
             print!("\x1b[49m");

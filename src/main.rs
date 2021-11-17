@@ -4,6 +4,7 @@ extern crate rand;
 extern crate utf8_chars;
 
 use clap::{App, Arg};
+use atty::Stream;
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
@@ -20,7 +21,7 @@ fn main() {
         let stdin = io::stdin(); // For lifetime reasons
         cat::print_chars_lol(BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()), &mut c, true);
     } else if lolcat_file(&filename, &mut c).is_err() {
-        println!("Error opening file {}.", filename)
+        eprintln!("Error opening file {}.", filename)
     }
 }
 
@@ -38,10 +39,6 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
     let frequency = matches.value_of("frequency").unwrap_or("0.1");
-    let background = matches.is_present("background");
-    let dialup = matches.is_present("dialup");
-
-    *filename = matches.value_of("filename").unwrap_or("").to_string();
 
     let mut seed: f64 = seed.parse().unwrap();
     let spread: f64 = spread.parse().unwrap();
@@ -51,12 +48,17 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         seed = rand::random::<f64>() * 10e9;
     }
 
+    *filename = matches.value_of("filename").unwrap_or("").to_string();
+
+    let print_color = matches.is_present("force-color") || atty::is(Stream::Stdout);
+
     let mut retval = cat::Control {
         seed,
         spread,
         frequency,
-        background_mode: background,
-        dialup_mode: dialup,
+        background_mode: matches.is_present("background"),
+        dialup_mode: matches.is_present("dialup"),
+        print_color: print_color,
     };
 
     if matches.is_present("help") {
@@ -87,7 +89,7 @@ fn print_rainbow_help(only_version: bool, c: &mut cat::Control) {
 
 fn lolcat_clap_app() -> App<'static, 'static> {
     App::new("lolcat")
-        .version("1.3.2")
+        .version("1.4.0")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
         .arg(
@@ -123,6 +125,13 @@ fn lolcat_clap_app() -> App<'static, 'static> {
                 .short("D")
                 .long("dialup")
                 .help("Dialup mode - Simulate dialup connection")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("force-color")
+                .short("F")
+                .long("force-color")
+                .help("Force color - Print escape sequences even if the output is not a terminal")
                 .takes_value(false),
         )
         .arg(
