@@ -15,34 +15,31 @@ pub struct Control {
     pub dialup_mode: bool,
 }
 
-pub fn print_lines_lol<I : Iterator<Item=S>, S : AsRef<str>>(lines: I, c: &mut Control) {
+pub fn print_lines_lol<I: Iterator<Item=S>, S: AsRef<str>>(lines: I, c: &mut Control) {
     for line in lines {
-        print_line_lol(line.as_ref(), c);
-
-        if c.dialup_mode {
-            let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
-            sleep(stall);
-        }
+        print_chars_lol(line.as_ref().chars().chain(Some('\n')), c);
     }
 }
 
-// Takes in s a string of characters
-// prints them using colored_print, and a newline at the end
-// Ignores most escape sequences
+// Takes in s an iterator over characters
+// duplicates escape sequences, otherwise prints printable characters with colored_print
+// Print newlines correctly
 // TODO Adds the color to a color escape sequence
-fn print_line_lol(s: &str, c: &mut Control) {
+fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control) {
     let original_seed = c.seed;
     let mut ignore_whitespace = c.background_mode;
 
     if !atty::is(Stream::Stdout) {
-        println!("{}", s);
+        for s in iter {
+            print!("{}", s);
+        }
         return;
     }
 
-    let mut iter = s.chars();
     while let Some(character) = iter.next() {
+        match character {
         // Consume escape sequences
-        if character == '\x1b' {
+        '\x1b' => {
             // Escape sequences seem to be one of many different categories
             // CSI sequences are \e \[ [bytes in 0x30-0x3F] [bytes in 0x20-0x2F] [final byte in 0x40-0x7E]
             // nF Escape seq are \e [bytes in 0x20-0x2F] [byte in 0x30-0x7E]
@@ -96,30 +93,42 @@ fn print_line_lol(s: &str, c: &mut Control) {
             // be lazy and assume in all other cases we consume exactly 1 byte
             _ => (),
             }
-        }
-
-        // In background mode, don't print colorful whitespace until the first printable character
-        if ignore_whitespace && character.is_whitespace() {
-            print!("{}", character);
             continue;
-        } else {
-            ignore_whitespace = false;
+        },
+        // Newlines print escape sequences to end background prints, and in dialup mode sleep
+        '\n' => {
+            if atty::is(Stream::Stdout) {
+                // Reset the background color if we should, since otherwise it will bleed all the way to the
+                // end of the terminal
+                if c.background_mode {
+                    print!("\x1b[49m");
+                }
+
+                // Reset the foreground color, since we are at the end of the output, and print the last newline
+                // This has to happen here, rather than only at the end of the program, because otherwise
+                // newlines become weird
+                print!("\x1b[39m");
+            }
+            println!();
+            if c.dialup_mode {
+                let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
+                sleep(stall);
+            }
+        },
+        _ => {
+            // In background mode, don't print colorful whitespace until the first printable character
+            if ignore_whitespace && character.is_whitespace() {
+                print!("{}", character);
+                continue;
+            } else {
+                ignore_whitespace = false;
+            }
+
+            colored_print(character, c);
+            c.seed += 1.0;
+        },
         }
-
-        colored_print(character, c);
-        c.seed += 1.0;
     }
-
-    // Reset the background color if we should, since otherwise it will bleed all the way to the
-    // end of the terminal
-    if c.background_mode {
-        print!("\x1b[49m");
-    }
-
-    // Reset the foreground color, since we are at the end of the output, and print the last newline
-    // This has to happen here, rather than only at the end of the program, because otherwise
-    // newlines become weird
-    println!("\x1b[39m");
 
     c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
 }
