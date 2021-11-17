@@ -49,7 +49,7 @@ pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, con
         match character {
         // Consume escape sequences
         '\x1b' => {
-            // Escape sequences seem to be one of many different categories
+            // Escape sequences seem to be one of many different categories: https://en.wikipedia.org/wiki/ANSI_escape_code
             // CSI sequences are \e \[ [bytes in 0x30-0x3F] [bytes in 0x20-0x2F] [final byte in 0x40-0x7E]
             // nF Escape seq are \e [bytes in 0x20-0x2F] [byte in 0x30-0x7E]
             // Fp Escape seq are \e [byte in 0x30-0x3F] [I have no idea, but `sl` creates one where the next byte is the end of the escape sequence, so assume that]
