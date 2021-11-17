@@ -33,15 +33,6 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
     let matches = lolcat_clap_app()
         .get_matches();
 
-    if matches.is_present("help") {
-        print_rainbow_help(false);
-        std::process::exit(0);
-    }
-    if matches.is_present("version") {
-        print_rainbow_help(true);
-        std::process::exit(0);
-    }
-
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
     let frequency = matches.value_of("frequency").unwrap_or("0.1");
@@ -58,16 +49,27 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         seed = rand::random::<f64>() * 10e9;
     }
 
-    cat::Control {
+    let mut retval = cat::Control {
         seed,
         spread,
         frequency,
         background_mode: background,
         dialup_mode: dialup,
+    };
+
+    if matches.is_present("help") {
+        print_rainbow_help(false, &mut retval);
+        std::process::exit(0);
     }
+    if matches.is_present("version") {
+        print_rainbow_help(true, &mut retval);
+        std::process::exit(0);
+    }
+
+    retval
 }
 
-fn print_rainbow_help(only_version: bool) {
+fn print_rainbow_help(only_version: bool, c: &mut cat::Control) {
     let app = lolcat_clap_app();
 
     let mut help = Vec::new();
@@ -78,15 +80,7 @@ fn print_rainbow_help(only_version: bool) {
     }
     let help = String::from_utf8(help).unwrap();
 
-    let mut default_settings = cat::Control {
-        seed: rand::random::<f64>() * 10e9,
-        spread: 3.0,
-        frequency: 0.1,
-        background_mode: false,
-        dialup_mode: false,
-    };
-
-    cat::print_lines_lol(help.lines(), &mut default_settings);
+    cat::print_lines_lol(help.lines(), c);
 }
 
 fn lolcat_clap_app() -> App<'static, 'static> {
