@@ -33,7 +33,7 @@ pub fn print_lines_lol<I: Iterator<Item=S>, S: AsRef<str>>(lines: I, c: &mut Con
 // Print newlines correctly, resetting background
 // If constantly_flush is on, it won't wait till a newline to flush stdout
 // TODO Adds the color to a color escape sequence
-fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, constantly_flush: bool) {
+pub fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, constantly_flush: bool) {
     let original_seed = c.seed;
     let mut ignore_whitespace = c.background_mode;
 

@@ -1,22 +1,24 @@
 extern crate atty;
 extern crate clap;
 extern crate rand;
+extern crate utf8_chars;
 
 use clap::{App, Arg};
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+use utf8_chars::BufReadCharsExt;
 
 mod cat;
 
 fn main() {
     let mut filename: String = "".to_string();
     let mut c = parse_cli_args(&mut filename);
-    let stdin = io::stdin(); // For lifetime reasons
 
     if filename == "" {
-        cat::print_lines_lol(stdin.lock().lines().map(|r| r.unwrap()), &mut c);
+        let stdin = io::stdin(); // For lifetime reasons
+        cat::print_chars_lol(BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()), &mut c, true);
     } else if lolcat_file(&filename, &mut c).is_err() {
         println!("Error opening file {}.", filename)
     }
