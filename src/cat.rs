@@ -2,9 +2,14 @@ extern crate rand;
 
 use atty::Stream;
 use std;
+
 use rand::Rng;
+
 use std::thread::sleep;
 use std::time::Duration;
+
+use std::io::Write;
+use std::io::stdout;
 
 // A struct to contain info we need to print with every character
 pub struct Control {
@@ -15,17 +20,20 @@ pub struct Control {
     pub dialup_mode: bool,
 }
 
+// This used to have more of a reason to exist, however now all its functionality is in
+// print_chars_lol(). Anyway, it takes in an iterator over lines and prints them all.
 pub fn print_lines_lol<I: Iterator<Item=S>, S: AsRef<str>>(lines: I, c: &mut Control) {
     for line in lines {
-        print_chars_lol(line.as_ref().chars().chain(Some('\n')), c);
+        print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
     }
 }
 
 // Takes in s an iterator over characters
 // duplicates escape sequences, otherwise prints printable characters with colored_print
-// Print newlines correctly
+// Print newlines correctly, resetting background
+// If constantly_flush is on, it won't wait till a newline to flush stdout
 // TODO Adds the color to a color escape sequence
-fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control) {
+fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control, constantly_flush: bool) {
     let original_seed = c.seed;
     let mut ignore_whitespace = c.background_mode;
 
@@ -95,7 +103,8 @@ fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control) {
             }
             continue;
         },
-        // Newlines print escape sequences to end background prints, and in dialup mode sleep
+        // Newlines print escape sequences to end background prints, and in dialup mode sleep, and
+        // reset the seed of the coloring
         '\n' => {
             if atty::is(Stream::Stdout) {
                 // Reset the background color if we should, since otherwise it will bleed all the way to the
@@ -114,7 +123,10 @@ fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control) {
                 let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
                 sleep(stall);
             }
+            c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
         },
+        // If not an escape sequence or a newline, print a colorful escape sequence and then the
+        // character
         _ => {
             // In background mode, don't print colorful whitespace until the first printable character
             if ignore_whitespace && character.is_whitespace() {
@@ -128,9 +140,12 @@ fn print_chars_lol<I: Iterator<Item=char>>(mut iter: I, c: &mut Control) {
             c.seed += 1.0;
         },
         }
-    }
 
-    c.seed = original_seed + 1.0; // Reset the seed, but bump it a bit
+        // If we should constantly flush, flush after each completed sequence
+        if constantly_flush {
+            stdout().flush().unwrap();
+        }
+    }
 }
 
 fn calc_fg_color(bg: (u8, u8, u8)) -> (u8, u8, u8) {
