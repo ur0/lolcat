@@ -1,47 +1,34 @@
 extern crate atty;
 extern crate clap;
 extern crate rand;
+extern crate utf8_chars;
 
 use clap::{App, Arg};
-use rand::Rng;
+use atty::Stream;
 use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::thread::sleep;
-use std::time::Duration;
+use utf8_chars::BufReadCharsExt;
 
 mod cat;
 
 fn main() {
     let mut filename: String = "".to_string();
     let mut c = parse_cli_args(&mut filename);
-    let stdin = io::stdin(); // For lifetime reasons
 
     if filename == "" {
-        for line in stdin.lock().lines() {
-            cat::print_with_lolcat(line.unwrap(), &mut c);
-            if c.dialup_mode {
-                let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 200));
-                sleep(stall);
-            }
-        }
+        let stdin = io::stdin(); // For lifetime reasons
+        cat::print_chars_lol(BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()), &mut c, true);
     } else if lolcat_file(&filename, &mut c).is_err() {
-        println!("Error opening file {}.", filename)
+        eprintln!("Error opening file {}.", filename)
     }
 }
 
 fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     let f = File::open(filename)?;
     let file = BufReader::new(&f);
-    for line in file.lines() {
-        cat::print_with_lolcat(line.unwrap(), c);
-
-        if c.dialup_mode {
-            let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
-            sleep(stall);
-        }
-    }
+    cat::print_lines_lol(file.lines().map(|r| r.unwrap()), c);
     Ok(())
 }
 
@@ -49,22 +36,9 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
     let matches = lolcat_clap_app()
         .get_matches();
 
-    if matches.is_present("help") {
-        print_rainbow_help(false);
-        std::process::exit(0);
-    }
-    if matches.is_present("version") {
-        print_rainbow_help(true);
-        std::process::exit(0);
-    }
-
     let seed = matches.value_of("seed").unwrap_or("0.0");
     let spread = matches.value_of("spread").unwrap_or("3.0");
     let frequency = matches.value_of("frequency").unwrap_or("0.1");
-    let background = matches.is_present("background");
-    let dialup = matches.is_present("dialup");
-
-    *filename = matches.value_of("filename").unwrap_or("").to_string();
 
     let mut seed: f64 = seed.parse().unwrap();
     let spread: f64 = spread.parse().unwrap();
@@ -74,16 +48,32 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         seed = rand::random::<f64>() * 10e9;
     }
 
-    cat::Control {
+    *filename = matches.value_of("filename").unwrap_or("").to_string();
+
+    let print_color = matches.is_present("force-color") || atty::is(Stream::Stdout);
+
+    let mut retval = cat::Control {
         seed,
         spread,
         frequency,
-        background_mode: background,
-        dialup_mode: dialup,
+        background_mode: matches.is_present("background"),
+        dialup_mode: matches.is_present("dialup"),
+        print_color: print_color,
+    };
+
+    if matches.is_present("help") {
+        print_rainbow_help(false, &mut retval);
+        std::process::exit(0);
     }
+    if matches.is_present("version") {
+        print_rainbow_help(true, &mut retval);
+        std::process::exit(0);
+    }
+
+    retval
 }
 
-fn print_rainbow_help(only_version: bool) {
+fn print_rainbow_help(only_version: bool, c: &mut cat::Control) {
     let app = lolcat_clap_app();
 
     let mut help = Vec::new();
@@ -94,25 +84,12 @@ fn print_rainbow_help(only_version: bool) {
     }
     let help = String::from_utf8(help).unwrap();
 
-    let mut default_settings = cat::Control {
-        seed: rand::random::<f64>() * 10e9,
-        spread: 3.0,
-        frequency: 0.1,
-        background_mode: false,
-        dialup_mode: false,
-    };
-
-    for line in help.lines() {
-        cat::print_with_lolcat(
-            line.to_string(),
-            &mut default_settings
-        );
-    }
+    cat::print_lines_lol(help.lines(), c);
 }
 
 fn lolcat_clap_app() -> App<'static, 'static> {
     App::new("lolcat")
-        .version("1.3.2")
+        .version("1.4.0")
         .author("Umang Raghuvanshi <u@umangis.me>")
         .about("The good ol' lolcat, now with fearless concurrency.")
         .arg(
@@ -148,6 +125,13 @@ fn lolcat_clap_app() -> App<'static, 'static> {
                 .short("D")
                 .long("dialup")
                 .help("Dialup mode - Simulate dialup connection")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("force-color")
+                .short("F")
+                .long("force-color")
+                .help("Force color - Print escape sequences even if the output is not a terminal")
                 .takes_value(false),
         )
         .arg(
