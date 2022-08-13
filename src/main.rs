@@ -90,8 +90,8 @@ fn print_rainbow_help(only_version: bool, c: &mut cat::Control) {
 fn lolcat_clap_app() -> App<'static, 'static> {
     App::new("lolcat")
         .version(env!("CARGO_PKG_VERSION"))
-        .author((env!("CARGO_PKG_AUTHORS")).replace(":", ", "))
-        .about("The good ol' lolcat, now with fearless concurrency.")
+        .author(env!("CARGO_PKG_AUTHORS"))
+        .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
             Arg::with_name("seed")
                 .short("s")
