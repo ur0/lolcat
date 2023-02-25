@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::num::ParseIntError;
 use utf8_chars::BufReadCharsExt;
 
 mod cat;
@@ -55,6 +56,21 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 
     let print_color = matches.is_present("force-color") || atty::is(Stream::Stdout);
 
+	// If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
+    let terminal_width: Result<u16, ParseIntError> = matches.value_of("width")
+        .unwrap_or("")
+        .parse();
+    let terminal_width: u16 = match terminal_width {
+        Ok(width) => width,
+        Err(_) => {
+            let size = termsize::get();
+            match size {
+                Some(size) => size.cols,
+                None => 0b11111111_11111111,
+            }
+        }
+    };
+
     let mut retval = cat::Control {
         seed,
         spread,
@@ -62,6 +78,7 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         background_mode: matches.is_present("background"),
         dialup_mode: matches.is_present("dialup"),
         print_color: print_color,
+        terminal_width_plus_one: terminal_width.wrapping_add(1),
     };
 
     if matches.is_present("help") {
@@ -136,6 +153,12 @@ fn lolcat_clap_app() -> App<'static, 'static> {
                 .long("force-color")
                 .help("Force color - Print escape sequences even if the output is not a terminal")
                 .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("width")
+                .long("terminal-width")
+                .help("Terminal width - Set a custom terminal wrapping width, or 0 for unlimited")
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("filename")

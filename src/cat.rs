@@ -16,6 +16,7 @@ pub struct Control {
     pub background_mode: bool,
     pub dialup_mode: bool,
     pub print_color: bool,
+    pub terminal_width_plus_one: u16,
 }
 
 // This used to have more of a reason to exist, however now all its functionality is in
@@ -39,8 +40,9 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
     c: &mut Control,
     constantly_flush: bool,
 ) {
-    let mut original_seed = c.seed;
-    let mut ignore_whitespace = c.background_mode;
+    let mut seed_at_start_of_line = c.seed;
+    let mut ignoring_whitespace = c.background_mode;
+    let mut printed_chars_on_line_plus_one = 1u16;
 
     if !c.print_color {
         for character in iter {
@@ -62,6 +64,7 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
                 // Otherwise the next byte is the whole escape sequence (maybe? I can't exactly tell, but I will go with it)
                 // We will consume up to, but not through, the next printable character
                 // In addition, we print everything in the escape sequence, even if it is a color (that will be overriden)
+                // TODO figure out just how these should affect printed_characters_on_line
                 print!("\x1b");
                 let mut escape_sequence_character = iter
                     .next()
@@ -111,37 +114,35 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
             // Newlines print escape sequences to end background prints, and in dialup mode sleep, and
             // reset the seed of the coloring and the value of ignore_whitespace
             '\n' => {
-                if c.print_color {
-                    // Reset the background color only, as we don't have to reset the foreground till
-                    // the end of the program
-                    // We reset the background here because otherwise it bleeds all the way to the next line
-                    if c.background_mode {
-                        print!("\x1b[49m");
-                    }
-                }
-                println!();
-                if c.dialup_mode {
-                    let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
-                    sleep(stall);
-                }
-
-                original_seed += 1.0;
-                c.seed = original_seed; // Reset the seed, but bump it a bit
-                ignore_whitespace = c.background_mode;
+                handle_newline(
+                    c,
+                    &mut seed_at_start_of_line,
+                    &mut ignoring_whitespace,
+                    &mut printed_chars_on_line_plus_one,
+                );
             }
             // If not an escape sequence or a newline, print a colorful escape sequence and then the
             // character
             _ => {
+                if printed_chars_on_line_plus_one == c.terminal_width_plus_one {
+                    handle_newline(
+                        c,
+                        &mut seed_at_start_of_line,
+                        &mut ignoring_whitespace,
+                        &mut printed_chars_on_line_plus_one,
+                    );
+                }
                 // In background mode, don't print colorful whitespace until the first printable character
-                if ignore_whitespace && character.is_whitespace() {
+                if ignoring_whitespace && character.is_whitespace() {
                     print!("{}", character);
                     continue;
                 } else {
-                    ignore_whitespace = false;
+                    ignoring_whitespace = false;
                 }
 
                 colored_print(character, c);
                 c.seed += 1.0;
+                printed_chars_on_line_plus_one += 1;
             }
         }
 
@@ -152,6 +153,32 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
             stdout().flush().unwrap();
         }
     }
+}
+
+fn handle_newline(
+    c: &mut Control,
+    seed_at_start_of_line: &mut f64,
+    ignoring_whitespace: &mut bool,
+    printed_chars_on_line_plus_one: &mut u16,
+) {
+    if c.print_color {
+        // Reset the background color only, as we don't have to reset the foreground till
+        // the end of the program
+        // We reset the background here because otherwise it bleeds all the way to the next line
+        if c.background_mode {
+            print!("\x1b[49m");
+        }
+    }
+    println!();
+    if c.dialup_mode {
+        let stall = Duration::from_millis(rand::thread_rng().gen_range(30, 700));
+        sleep(stall);
+    }
+
+    *seed_at_start_of_line += 1.0;
+    c.seed = *seed_at_start_of_line; // Reset the seed, but bump it a bit
+    *ignoring_whitespace = c.background_mode;
+    *printed_chars_on_line_plus_one = 1u16;
 }
 
 fn reset_colors(c: &Control) {
