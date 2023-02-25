@@ -1,6 +1,6 @@
 [package]
 name = "lolcat"
-version = "1.4.1"
+version = "1.5.0"
 authors = ["Umang Raghuvanshi <u@umangis.me>"]
 description = "The good ol' lolcat, now with fearless concurrency."
 license = "MIT"
@@ -11,3 +11,4 @@ clap = "2.33.0"
 rand = "0.7.3"
 atty = "0.2"
 utf8-chars = "1.0.2"
+termsize = "0.1.6"
