@@ -56,10 +56,9 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 
     let print_color = matches.is_present("force-color") || atty::is(Stream::Stdout);
 
-	// If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
-    let terminal_width: Result<u16, ParseIntError> = matches.value_of("width")
-        .unwrap_or("")
-        .parse();
+    // If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
+    let terminal_width: Result<u16, ParseIntError> =
+        matches.value_of("width").unwrap_or("").parse();
     let terminal_width: u16 = match terminal_width {
         Ok(width) => width,
         Err(_) => {
@@ -71,6 +70,9 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         }
     };
 
+    let line_wrap = !matches.is_present("no-line-wrap");
+    let word_wrap = !matches.is_present("no-word-wrap");
+
     let mut retval = cat::Control {
         seed,
         spread,
@@ -79,6 +81,8 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         dialup_mode: matches.is_present("dialup"),
         print_color: print_color,
         terminal_width_plus_one: terminal_width.wrapping_add(1),
+        line_wrap: line_wrap,
+        word_wrap: word_wrap,
     };
 
     if matches.is_present("help") {
@@ -159,6 +163,18 @@ fn lolcat_clap_app() -> App<'static, 'static> {
                 .long("terminal-width")
                 .help("Terminal width - Set a custom terminal wrapping width, or 0 for unlimited")
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("no-line-wrap")
+                .long("no-line-wrap")
+                .help("Disables smart line wrapping behavior for blazingly unsafe performance")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("no-word-wrap")
+                .long("no-word-wrap")
+                .help("Disables smart word wrapping behavior as it might be annoying in some cases")
+                .takes_value(false),
         )
         .arg(
             Arg::with_name("filename")

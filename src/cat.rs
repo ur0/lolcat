@@ -16,18 +16,65 @@ pub struct Control {
     pub background_mode: bool,
     pub dialup_mode: bool,
     pub print_color: bool,
+    pub line_wrap: bool,
+    pub word_wrap: bool,
     pub terminal_width_plus_one: u16,
+}
+
+pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut Control) {
+    if !c.line_wrap {
+        generic_print_lines_lol::<false, false, _, _>(lines, c);
+    } else if !c.word_wrap {
+        generic_print_lines_lol::<true, false, _, _>(lines, c);
+    } else {
+        generic_print_lines_lol::<true, true, _, _>(lines, c);
+    }
 }
 
 // This used to have more of a reason to exist, however now all its functionality is in
 // print_chars_lol(). It takes in an iterator over lines and prints them all.
 // At the end, it resets the foreground color
-pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut Control) {
+pub fn generic_print_lines_lol<
+    const LINE_WRAP: bool,
+    const WORD_WRAP: bool,
+    I: Iterator<Item = S>,
+    S: AsRef<str>,
+>(
+    lines: I,
+    c: &mut Control,
+) {
     for line in lines {
-        print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
+        generic_print_chars_lol::<LINE_WRAP, WORD_WRAP, false, _>(
+            line.as_ref().chars().chain(Some('\n')),
+            c,
+        );
     }
     if c.print_color {
         print!("\x1b[39m");
+    }
+}
+
+pub fn print_chars_lol<I: Iterator<Item = char>>(
+    mut iter: I,
+    c: &mut Control,
+    constantly_flush: bool,
+) {
+    if constantly_flush {
+        if !c.line_wrap {
+            generic_print_chars_lol::<false, false, true, _>(&mut iter, c);
+        } else if !c.word_wrap {
+            generic_print_chars_lol::<true, false, true, _>(&mut iter, c);
+        } else {
+            generic_print_chars_lol::<true, true, true, _>(&mut iter, c);
+        }
+    } else {
+        if !c.line_wrap {
+            generic_print_chars_lol::<false, false, false, _>(&mut iter, c);
+        } else if !c.word_wrap {
+            generic_print_chars_lol::<true, false, false, _>(&mut iter, c);
+        } else {
+            generic_print_chars_lol::<true, true, false, _>(&mut iter, c);
+        }
     }
 }
 
@@ -35,10 +82,14 @@ pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut C
 // duplicates escape sequences, otherwise prints printable characters with colored_print
 // Print newlines correctly, resetting background
 // If constantly_flush is on, it won't wait till a newline to flush stdout
-pub fn print_chars_lol<I: Iterator<Item = char>>(
+pub fn generic_print_chars_lol<
+    const LINE_WRAP: bool,
+    const WORD_WRAP: bool,
+    const CONSTANTLY_FLUSH: bool,
+    I: Iterator<Item = char>,
+>(
     mut iter: I,
     c: &mut Control,
-    constantly_flush: bool,
 ) {
     let mut seed_at_start_of_line = c.seed;
     let mut ignoring_whitespace = c.background_mode;
@@ -124,7 +175,7 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
             // If not an escape sequence or a newline, print a colorful escape sequence and then the
             // character
             _ => {
-                if printed_chars_on_line_plus_one == c.terminal_width_plus_one {
+                if LINE_WRAP && printed_chars_on_line_plus_one == c.terminal_width_plus_one {
                     handle_newline(
                         c,
                         &mut seed_at_start_of_line,
@@ -142,13 +193,15 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
 
                 colored_print(character, c);
                 c.seed += 1.0;
-                printed_chars_on_line_plus_one += 1;
+                if LINE_WRAP {
+                    printed_chars_on_line_plus_one += 1;
+                }
             }
         }
 
         // If we should constantly flush, flush after each completed sequence, and also reset
         // colors because otherwise weird things happen
-        if constantly_flush {
+        if CONSTANTLY_FLUSH {
             reset_colors(c);
             stdout().flush().unwrap();
         }
