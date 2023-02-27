@@ -18,7 +18,7 @@ fn main() {
     let mut filename: String = "".to_string();
     let mut c = parse_cli_args(&mut filename);
 
-    if is_stdout(&filename) {
+    if is_stdin(&filename) {
         let stdin = io::stdin(); // For lifetime reasons
         cat::print_chars_lol(
             BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()),
@@ -37,7 +37,7 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn is_stdout(filename: &String) -> bool {
+fn is_stdin(filename: &String) -> bool {
     filename == ""
 }
 
@@ -85,7 +85,7 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         .value_of("word-wrap")
         .unwrap_or("")
         .parse()
-        .unwrap_or(!is_stdout(&filename));
+        .unwrap_or(!is_stdin(&filename));
 
     let mut retval = cat::Control {
         seed,
