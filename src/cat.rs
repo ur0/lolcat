@@ -210,14 +210,15 @@ pub fn generic_print_chars_lol<
                             &mut printed_chars_on_line,
                         );
                         word_wrap_buffer_chars = 0;
+                    } else {
+                        print_char_lol::<LINE_WRAP, WORD_WRAP>(
+                            character,
+                            c,
+                            &mut seed_at_start_of_line,
+                            &mut ignoring_whitespace,
+                            &mut printed_chars_on_line,
+                        );
                     }
-                    print_char_lol::<LINE_WRAP, WORD_WRAP>(
-                        character,
-                        c,
-                        &mut seed_at_start_of_line,
-                        &mut ignoring_whitespace,
-                        &mut printed_chars_on_line,
-                    );
                 } else {
                     print_char_lol::<LINE_WRAP, WORD_WRAP>(
                         character,
@@ -321,7 +322,6 @@ fn print_word_lol(
             ignoring_whitespace,
             printed_chars_on_line,
         );
-        *word_wrap_buffer_chars = 0;
     }
     // In background mode, don't print colorful whitespace until the first printable character
     if *ignoring_whitespace {

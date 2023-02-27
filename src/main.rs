@@ -87,8 +87,6 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         .parse()
         .unwrap_or(!is_stdout(&filename));
 
-    println!("Is word_wrap : {}", word_wrap);
-
     let mut retval = cat::Control {
         seed,
         spread,
