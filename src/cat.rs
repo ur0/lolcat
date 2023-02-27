@@ -42,7 +42,7 @@ pub fn generic_print_lines_lol<
     lines: I,
     c: &mut Control,
 ) {
-    let mut word_wrap_buffer: Option<String> = if WORD_WRAP { Some(String::new()) } else { None };
+    let mut word_wrap_buffer = String::new();
     for line in lines {
         generic_print_chars_lol::<LINE_WRAP, WORD_WRAP, false, _>(
             line.as_ref().chars().chain(Some('\n')),
@@ -60,11 +60,7 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
     c: &mut Control,
     constantly_flush: bool,
 ) {
-    let mut word_wrap_buffer: Option<String> = if c.word_wrap {
-        Some(String::new())
-    } else {
-        None
-    };
+    let mut word_wrap_buffer: String = String::new();
     if constantly_flush {
         if c.terminal_width == 0b11111111_11111111 {
             generic_print_chars_lol::<false, false, true, _>(&mut iter, c, &mut word_wrap_buffer);
@@ -96,12 +92,11 @@ pub fn generic_print_chars_lol<
 >(
     mut iter: I,
     c: &mut Control,
-    word_wrap_buffer: &mut Option<String>,
+    word_wrap_buffer: &mut String,
 ) {
     let mut seed_at_start_of_line = c.seed;
     let mut ignoring_whitespace = c.background_mode;
     let mut printed_chars_on_line: u16 = 0;
-    let mut word_wrap_buffer_chars: u16 = 0;
 
     if !c.print_color {
         for character in iter {
@@ -175,14 +170,12 @@ pub fn generic_print_chars_lol<
             '\n' => {
                 if WORD_WRAP {
                     print_word_lol(
-                        word_wrap_buffer.as_mut().unwrap(),
+                        word_wrap_buffer,
                         c,
                         &mut seed_at_start_of_line,
                         &mut ignoring_whitespace,
                         &mut printed_chars_on_line,
-                        &mut word_wrap_buffer_chars,
                     );
-                    word_wrap_buffer_chars = 0;
                 }
                 handle_newline(
                     c,
@@ -195,12 +188,11 @@ pub fn generic_print_chars_lol<
             ' ' => {
                 if WORD_WRAP {
                     print_word_lol(
-                        word_wrap_buffer.as_mut().unwrap(),
+                        word_wrap_buffer,
                         c,
                         &mut seed_at_start_of_line,
                         &mut ignoring_whitespace,
                         &mut printed_chars_on_line,
-                        &mut word_wrap_buffer_chars,
                     );
                     if printed_chars_on_line == c.terminal_width - 1 {
                         handle_newline(
@@ -209,7 +201,6 @@ pub fn generic_print_chars_lol<
                             &mut ignoring_whitespace,
                             &mut printed_chars_on_line,
                         );
-                        word_wrap_buffer_chars = 0;
                     } else {
                         print_char_lol::<LINE_WRAP, WORD_WRAP>(
                             character,
@@ -234,14 +225,13 @@ pub fn generic_print_chars_lol<
             _ => {
                 if WORD_WRAP {
                     // If the buffer is fully the width of the terminal, we must print that now
-                    if word_wrap_buffer_chars + 1 == c.terminal_width {
+                    if word_wrap_buffer.len() as u16 + 1 == c.terminal_width {
                         print_word_lol(
-                            word_wrap_buffer.as_mut().unwrap(),
+                            word_wrap_buffer,
                             c,
                             &mut seed_at_start_of_line,
                             &mut ignoring_whitespace,
                             &mut printed_chars_on_line,
-                            &mut word_wrap_buffer_chars,
                         );
                         handle_newline(
                             c,
@@ -249,10 +239,8 @@ pub fn generic_print_chars_lol<
                             &mut ignoring_whitespace,
                             &mut printed_chars_on_line,
                         );
-                        word_wrap_buffer_chars = 0;
                     }
-                    word_wrap_buffer.as_mut().unwrap().push(character);
-                    word_wrap_buffer_chars += 1;
+                    word_wrap_buffer.push(character);
                 } else {
                     print_char_lol::<LINE_WRAP, WORD_WRAP>(
                         character,
@@ -313,9 +301,8 @@ fn print_word_lol(
     seed_at_start_of_line: &mut f64,
     ignoring_whitespace: &mut bool,
     printed_chars_on_line: &mut u16,
-    word_wrap_buffer_chars: &mut u16,
 ) {
-    if *printed_chars_on_line + *word_wrap_buffer_chars >= c.terminal_width {
+    if *printed_chars_on_line + word.len() as u16 >= c.terminal_width {
         handle_newline(
             c,
             seed_at_start_of_line,
@@ -340,9 +327,8 @@ fn print_word_lol(
             c.seed += 1.0;
         }
     }
-    *printed_chars_on_line += *word_wrap_buffer_chars;
+    *printed_chars_on_line += word.len() as u16;
     word.clear();
-    *word_wrap_buffer_chars = 0;
 }
 
 fn handle_newline(
