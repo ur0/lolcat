@@ -1,9 +1,7 @@
-extern crate atty;
 extern crate clap;
 extern crate rand;
 extern crate utf8_chars;
 
-use atty::Stream;
 use clap::{App, Arg};
 use std::fs::File;
 use std::io;
