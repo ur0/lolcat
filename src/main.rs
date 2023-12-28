@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::IsTerminal;
 use std::num::ParseIntError;
 use utf8_chars::BufReadCharsExt;
 
@@ -54,7 +55,7 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 
     *filename = matches.value_of("filename").unwrap_or("").to_string();
 
-    let print_color = matches.is_present("force-color") || atty::is(Stream::Stdout);
+    let print_color = matches.is_present("force-color") || std::io::stdout().is_terminal();
 
 	// If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
     let terminal_width: Result<u16, ParseIntError> = matches.value_of("width")

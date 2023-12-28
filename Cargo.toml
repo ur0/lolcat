@@ -9,7 +9,6 @@ repository = "https://github.com/ur0/lolcat"
 [dependencies]
 clap = "2.33.0"
 rand = "0.7.3"
-atty = "0.2"
 utf8-chars = "1.0.2"
 termsize = "0.1.6"
 
