@@ -17,7 +17,7 @@ fn main() {
     let mut filename: String = "".to_string();
     let mut c = parse_cli_args(&mut filename);
 
-    if filename == "" {
+    if is_stdin(&filename) {
         let stdin = io::stdin(); // For lifetime reasons
         cat::print_chars_lol(
             BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()),
@@ -34,6 +34,10 @@ fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     let file = BufReader::new(&f);
     cat::print_lines_lol(file.lines().map(|r| r.unwrap()), c);
     Ok(())
+}
+
+fn is_stdin(filename: &String) -> bool {
+    filename == ""
 }
 
 fn parse_cli_args(filename: &mut String) -> cat::Control {
@@ -55,12 +59,18 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 
     let print_color = matches.is_present("force-color") || std::io::stdout().is_terminal();
 
-	// If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
-    let terminal_width: Result<u16, ParseIntError> = matches.value_of("width")
-        .unwrap_or("")
-        .parse();
+    // If the terminal width is passed, use that. Else, get the size of the terminal. Else, use max u16
+    // If 0 is passed, then use max u16
+    let terminal_width: Result<u16, ParseIntError> =
+        matches.value_of("width").unwrap_or("").parse();
     let terminal_width: u16 = match terminal_width {
-        Ok(width) => width,
+        Ok(width) => {
+            if width == 0 {
+                0b11111111_11111111
+            } else {
+                width
+            }
+        }
         Err(_) => {
             let size = termsize::get();
             match size {
@@ -70,6 +80,12 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         }
     };
 
+    let word_wrap = matches
+        .value_of("word-wrap")
+        .unwrap_or("")
+        .parse()
+        .unwrap_or(!is_stdin(&filename));
+
     let mut retval = cat::Control {
         seed,
         spread,
@@ -77,7 +93,8 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         background_mode: matches.is_present("background"),
         dialup_mode: matches.is_present("dialup"),
         print_color: print_color,
-        terminal_width_plus_one: terminal_width.wrapping_add(1),
+        terminal_width: terminal_width,
+        word_wrap: word_wrap,
     };
 
     if matches.is_present("help") {
@@ -136,7 +153,7 @@ fn lolcat_clap_app() -> App<'static, 'static> {
             Arg::with_name("background")
                 .short("B")
                 .long("bg")
-                .help("Background mode - If selected the background will be rainbow. Default false")
+                .help("Background mode - If given, the background will be rainbow.")
                 .takes_value(false),
         )
         .arg(
@@ -156,7 +173,13 @@ fn lolcat_clap_app() -> App<'static, 'static> {
         .arg(
             Arg::with_name("width")
                 .long("terminal-width")
-                .help("Terminal width - Set a custom terminal wrapping width, or 0 for unlimited")
+                .help("Terminal width - Set a custom terminal wrapping width, or 0 for unlimited (Default: your terminal's width)")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("word-wrap")
+                .long("word-wrap")
+                .help("Allow setting word wrapping behavior (Default: true for files, false for stdin)")
                 .takes_value(true),
         )
         .arg(

@@ -16,18 +16,67 @@ pub struct Control {
     pub background_mode: bool,
     pub dialup_mode: bool,
     pub print_color: bool,
-    pub terminal_width_plus_one: u16,
+    pub word_wrap: bool,
+    pub terminal_width: u16,
+}
+
+pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut Control) {
+    if c.terminal_width == 0b11111111_11111111 {
+        generic_print_lines_lol::<false, false, _, _>(lines, c);
+    } else if !c.word_wrap {
+        generic_print_lines_lol::<true, false, _, _>(lines, c);
+    } else {
+        generic_print_lines_lol::<true, true, _, _>(lines, c);
+    }
 }
 
 // This used to have more of a reason to exist, however now all its functionality is in
 // print_chars_lol(). It takes in an iterator over lines and prints them all.
 // At the end, it resets the foreground color
-pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut Control) {
+pub fn generic_print_lines_lol<
+    const LINE_WRAP: bool,
+    const WORD_WRAP: bool,
+    I: Iterator<Item = S>,
+    S: AsRef<str>,
+>(
+    lines: I,
+    c: &mut Control,
+) {
+    let mut word_wrap_buffer = String::new();
     for line in lines {
-        print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
+        generic_print_chars_lol::<LINE_WRAP, WORD_WRAP, false, _>(
+            line.as_ref().chars().chain(Some('\n')),
+            c,
+            &mut word_wrap_buffer,
+        );
     }
     if c.print_color {
         print!("\x1b[39m");
+    }
+}
+
+pub fn print_chars_lol<I: Iterator<Item = char>>(
+    mut iter: I,
+    c: &mut Control,
+    constantly_flush: bool,
+) {
+    let mut word_wrap_buffer: String = String::new();
+    if constantly_flush {
+        if c.terminal_width == 0b11111111_11111111 {
+            generic_print_chars_lol::<false, false, true, _>(&mut iter, c, &mut word_wrap_buffer);
+        } else if !c.word_wrap {
+            generic_print_chars_lol::<true, false, true, _>(&mut iter, c, &mut word_wrap_buffer);
+        } else {
+            generic_print_chars_lol::<true, true, true, _>(&mut iter, c, &mut word_wrap_buffer);
+        }
+    } else {
+        if c.terminal_width == 0b11111111_11111111 {
+            generic_print_chars_lol::<false, false, false, _>(&mut iter, c, &mut word_wrap_buffer);
+        } else if !c.word_wrap {
+            generic_print_chars_lol::<true, false, false, _>(&mut iter, c, &mut word_wrap_buffer);
+        } else {
+            generic_print_chars_lol::<true, true, false, _>(&mut iter, c, &mut word_wrap_buffer);
+        }
     }
 }
 
@@ -35,14 +84,19 @@ pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut C
 // duplicates escape sequences, otherwise prints printable characters with colored_print
 // Print newlines correctly, resetting background
 // If constantly_flush is on, it won't wait till a newline to flush stdout
-pub fn print_chars_lol<I: Iterator<Item = char>>(
+pub fn generic_print_chars_lol<
+    const LINE_WRAP: bool,
+    const WORD_WRAP: bool,
+    const CONSTANTLY_FLUSH: bool,
+    I: Iterator<Item = char>,
+>(
     mut iter: I,
     c: &mut Control,
-    constantly_flush: bool,
+    word_wrap_buffer: &mut String,
 ) {
     let mut seed_at_start_of_line = c.seed;
     let mut ignoring_whitespace = c.background_mode;
-    let mut printed_chars_on_line_plus_one = 1u16;
+    let mut printed_chars_on_line: u16 = 0;
 
     if !c.print_color {
         for character in iter {
@@ -114,52 +168,174 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
             // Newlines print escape sequences to end background prints, and in dialup mode sleep, and
             // reset the seed of the coloring and the value of ignore_whitespace
             '\n' => {
+                if WORD_WRAP {
+                    print_word_lol(
+                        word_wrap_buffer,
+                        c,
+                        &mut seed_at_start_of_line,
+                        &mut ignoring_whitespace,
+                        &mut printed_chars_on_line,
+                    );
+                }
                 handle_newline(
                     c,
                     &mut seed_at_start_of_line,
                     &mut ignoring_whitespace,
-                    &mut printed_chars_on_line_plus_one,
+                    &mut printed_chars_on_line,
                 );
             }
-            // If not an escape sequence or a newline, print a colorful escape sequence and then the
-            // character
-            _ => {
-                if printed_chars_on_line_plus_one == c.terminal_width_plus_one {
-                    handle_newline(
+            // Do the same thing as normal characters if word wrap is not on. Or if word wrap is on, handle actual printing
+            ' ' => {
+                if WORD_WRAP {
+                    print_word_lol(
+                        word_wrap_buffer,
                         c,
                         &mut seed_at_start_of_line,
                         &mut ignoring_whitespace,
-                        &mut printed_chars_on_line_plus_one,
+                        &mut printed_chars_on_line,
+                    );
+                    if printed_chars_on_line == c.terminal_width - 1 {
+                        handle_newline(
+                            c,
+                            &mut seed_at_start_of_line,
+                            &mut ignoring_whitespace,
+                            &mut printed_chars_on_line,
+                        );
+                    } else {
+                        print_char_lol::<LINE_WRAP, WORD_WRAP>(
+                            character,
+                            c,
+                            &mut seed_at_start_of_line,
+                            &mut ignoring_whitespace,
+                            &mut printed_chars_on_line,
+                        );
+                    }
+                } else {
+                    print_char_lol::<LINE_WRAP, WORD_WRAP>(
+                        character,
+                        c,
+                        &mut seed_at_start_of_line,
+                        &mut ignoring_whitespace,
+                        &mut printed_chars_on_line,
                     );
                 }
-                // In background mode, don't print colorful whitespace until the first printable character
-                if ignoring_whitespace && character.is_whitespace() {
-                    print!("{}", character);
-                    continue;
+            }
+            // If not an escape sequence or a newline, print a colorful escape sequence and then the
+            // character. Or, if word wrap is on, add to the word buffer
+            _ => {
+                if WORD_WRAP {
+                    // If the buffer is fully the width of the terminal, we must print that now
+                    if word_wrap_buffer.len() as u16 + 1 == c.terminal_width {
+                        print_word_lol(
+                            word_wrap_buffer,
+                            c,
+                            &mut seed_at_start_of_line,
+                            &mut ignoring_whitespace,
+                            &mut printed_chars_on_line,
+                        );
+                        handle_newline(
+                            c,
+                            &mut seed_at_start_of_line,
+                            &mut ignoring_whitespace,
+                            &mut printed_chars_on_line,
+                        );
+                    }
+                    word_wrap_buffer.push(character);
                 } else {
-                    ignoring_whitespace = false;
+                    print_char_lol::<LINE_WRAP, WORD_WRAP>(
+                        character,
+                        c,
+                        &mut seed_at_start_of_line,
+                        &mut ignoring_whitespace,
+                        &mut printed_chars_on_line,
+                    );
                 }
-
-                colored_print(character, c);
-                c.seed += 1.0;
-                printed_chars_on_line_plus_one += 1;
             }
         }
 
         // If we should constantly flush, flush after each completed sequence, and also reset
         // colors because otherwise weird things happen
-        if constantly_flush {
+        if CONSTANTLY_FLUSH {
             reset_colors(c);
             stdout().flush().unwrap();
         }
     }
 }
 
+fn print_char_lol<const LINE_WRAP: bool, const WORD_WRAP: bool>(
+    character: char,
+    c: &mut Control,
+    seed_at_start_of_line: &mut f64,
+    ignoring_whitespace: &mut bool,
+    printed_chars_on_line: &mut u16,
+) {
+    if LINE_WRAP && *printed_chars_on_line == c.terminal_width {
+        handle_newline(
+            c,
+            seed_at_start_of_line,
+            ignoring_whitespace,
+            printed_chars_on_line,
+        );
+    }
+    // In background mode, don't print colorful whitespace until the first printable character
+    if *ignoring_whitespace {
+        if character.is_whitespace() {
+            print!("{}", character);
+        } else {
+            *ignoring_whitespace = false;
+            colored_print(character, c);
+        }
+    } else {
+        colored_print(character, c);
+    }
+
+    c.seed += 1.0;
+    if LINE_WRAP {
+        *printed_chars_on_line += 1;
+    }
+}
+
+fn print_word_lol(
+    word: &mut String,
+    c: &mut Control,
+    seed_at_start_of_line: &mut f64,
+    ignoring_whitespace: &mut bool,
+    printed_chars_on_line: &mut u16,
+) {
+    if *printed_chars_on_line + word.len() as u16 >= c.terminal_width {
+        handle_newline(
+            c,
+            seed_at_start_of_line,
+            ignoring_whitespace,
+            printed_chars_on_line,
+        );
+    }
+    // In background mode, don't print colorful whitespace until the first printable character
+    if *ignoring_whitespace {
+        for character in word.chars() {
+            if *ignoring_whitespace && character.is_whitespace() {
+                print!("{}", character);
+            } else {
+                *ignoring_whitespace = false;
+                colored_print(character, c);
+                c.seed += 1.0;
+            }
+        }
+    } else {
+        for character in word.chars() {
+            colored_print(character, c);
+            c.seed += 1.0;
+        }
+    }
+    *printed_chars_on_line += word.len() as u16;
+    word.clear();
+}
+
 fn handle_newline(
     c: &mut Control,
     seed_at_start_of_line: &mut f64,
     ignoring_whitespace: &mut bool,
-    printed_chars_on_line_plus_one: &mut u16,
+    printed_chars_on_line: &mut u16,
 ) {
     if c.print_color {
         // Reset the background color only, as we don't have to reset the foreground till
@@ -178,7 +354,7 @@ fn handle_newline(
     *seed_at_start_of_line += 1.0;
     c.seed = *seed_at_start_of_line; // Reset the seed, but bump it a bit
     *ignoring_whitespace = c.background_mode;
-    *printed_chars_on_line_plus_one = 1u16;
+    *printed_chars_on_line = 0;
 }
 
 fn reset_colors(c: &Control) {
