@@ -55,6 +55,7 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 
     let print_color = matches.is_present("force-color") || std::io::stdout().is_terminal();
 
+    let prompt_mode = matches.is_present("prompt-mode");
 	// If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
     let terminal_width: Result<u16, ParseIntError> = matches.value_of("width")
         .unwrap_or("")
@@ -77,6 +78,7 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         background_mode: matches.is_present("background"),
         dialup_mode: matches.is_present("dialup"),
         print_color: print_color,
+        prompt_mode: prompt_mode,
         terminal_width_plus_one: terminal_width.wrapping_add(1),
     };
 
@@ -151,6 +153,13 @@ fn lolcat_clap_app() -> App<'static, 'static> {
                 .short("F")
                 .long("force-color")
                 .help("Force color - Print escape sequences even if the output is not a terminal")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("prompt-mode")
+                .short("P")
+                .long("prompt-mode")
+                .help("Prompt mode - Adds bash non-printing character escape sequences to color codes")
                 .takes_value(false),
         )
         .arg(

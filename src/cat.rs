@@ -16,6 +16,7 @@ pub struct Control {
     pub background_mode: bool,
     pub dialup_mode: bool,
     pub print_color: bool,
+    pub prompt_mode: bool,
     pub terminal_width_plus_one: u16,
 }
 
@@ -27,7 +28,11 @@ pub fn print_lines_lol<I: Iterator<Item = S>, S: AsRef<str>>(lines: I, c: &mut C
         print_chars_lol(line.as_ref().chars().chain(Some('\n')), c, false);
     }
     if c.print_color {
-        print!("\x1b[39m");
+        if c.prompt_mode {
+            print!("\\[\x1b[39m\\]");
+        } else {
+            print!("\x1b[39m");
+        }
     }
 }
 
@@ -166,7 +171,11 @@ fn handle_newline(
         // the end of the program
         // We reset the background here because otherwise it bleeds all the way to the next line
         if c.background_mode {
-            print!("\x1b[49m");
+            if c.prompt_mode {
+                print!("\\[\x1b[49m\\]");
+            } else {
+                print!("\x1b[49m");
+            }
         }
     }
     println!();
@@ -183,6 +192,9 @@ fn handle_newline(
 
 fn reset_colors(c: &Control) {
     if c.print_color {
+        if c.prompt_mode {
+            print!("\\[");
+        }
         // Reset the background color
         if c.background_mode {
             print!("\x1b[49m");
@@ -190,6 +202,9 @@ fn reset_colors(c: &Control) {
 
         // Reset the foreground color
         print!("\x1b[39m");
+        if c.prompt_mode {
+            print!("\\]");
+        }
     }
 }
 
@@ -197,13 +212,24 @@ fn colored_print(character: char, c: &mut Control) {
     if c.background_mode {
         let bg = get_color_tuple(c);
         let fg = calc_fg_color(bg);
-        print!(
-            "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
-            fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
-        );
+        if c.prompt_mode {
+            print!(
+                "\\[\x1b[38;2;{};{};{};48;2;{};{};{}m\\]{}",
+                fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
+            );
+        } else {
+            print!(
+                "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
+                fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
+            );
+        }
     } else {
         let fg = get_color_tuple(c);
-        print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
+        if c.prompt_mode {
+            print!("\\[\x1b[38;2;{};{};{}m\\]{}", fg.0, fg.1, fg.2, character);
+        } else {
+            print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
+        }
     }
 }
 
