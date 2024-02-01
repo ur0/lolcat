@@ -70,14 +70,20 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
         }
     };
 
+    let terminal_supports_truecolor = match std::env::var("COLORTERM") {
+        Ok(val) => val == "truecolor" || val == "24bit",
+        Err(_) => false,
+    };
+
     let mut retval = cat::Control {
         seed,
         spread,
         frequency,
         background_mode: matches.is_present("background"),
         dialup_mode: matches.is_present("dialup"),
-        print_color: print_color,
+        print_color,
         terminal_width_plus_one: terminal_width.wrapping_add(1),
+        terminal_supports_truecolor,
     };
 
     if matches.is_present("help") {

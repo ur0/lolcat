@@ -17,6 +17,7 @@ pub struct Control {
     pub dialup_mode: bool,
     pub print_color: bool,
     pub terminal_width_plus_one: u16,
+    pub terminal_supports_truecolor: bool,
 }
 
 // This used to have more of a reason to exist, however now all its functionality is in
@@ -198,12 +199,18 @@ fn colored_print(character: char, c: &mut Control) {
         let bg = get_color_tuple(c);
         let fg = calc_fg_color(bg);
         print!(
-            "\x1b[38;2;{};{};{};48;2;{};{};{}m{}",
-            fg.0, fg.1, fg.2, bg.0, bg.1, bg.2, character
+            "{}{}{}",
+            rgb_to_256(fg.0, fg.1, fg.2, true, c.terminal_supports_truecolor),
+            rgb_to_256(bg.0, bg.1, bg.2, false, c.terminal_supports_truecolor),
+            character
         );
     } else {
         let fg = get_color_tuple(c);
-        print!("\x1b[38;2;{};{};{}m{}", fg.0, fg.1, fg.2, character);
+        print!(
+            "{}{}",
+            rgb_to_256(fg.0, fg.1, fg.2, true, c.terminal_supports_truecolor),
+            character
+        );
     }
 }
 
@@ -259,4 +266,26 @@ fn get_color_tuple(c: &Control) -> (u8, u8, u8) {
     let blue = (i + (std::f64::consts::PI * 4.00 / 3.00)).sin() * 127.00 + 128.00;
 
     (red as u8, green as u8, blue as u8)
+}
+
+// Returns closest supported 256-color an RGB value
+// Inspired by the ruby paint gem
+fn rgb_to_256(r: u8, g: u8, b: u8, foreground: bool, use_truecolor: bool) -> String {
+    let prefix = if foreground { "38" } else { "48" };
+
+    if use_truecolor {
+        return format!("\x1b[{};2;{};{};{}m", prefix, r, g, b);
+    }
+
+    let r = r as f64;
+    let g = g as f64;
+    let b = b as f64;
+
+    let colors = [(r, 36), (g, 6), (b, 1)];
+    let mut color_code = 16;
+    for (color, modulator) in &colors {
+        color_code += ((6.0 * (*color / 256.0)).floor() as u16) * modulator;
+    }
+
+    format!("\x1b[{};5;{}m", prefix, color_code)
 }
