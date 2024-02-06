@@ -93,7 +93,7 @@ checksum = "302d7ab3130588088d277783b1e2d2e10c9e9e4a16dd9050e6ec93fb3e7048f4"
 
 [[package]]
 name = "lolcat"
-version = "1.5.1"
+version = "1.5.2"
 dependencies = [
  "clap",
  "rand",

@@ -1,7 +1,7 @@
 [package]
 name = "lolcat"
-version = "1.5.1"
-authors = ["Umang Raghuvanshi <u@umangis.me>"]
+version = "1.5.2"
+authors = ["Umang Raghuvanshi and the lolcat contributors"]
 description = "The good ol' lolcat, now with fearless concurrency."
 license = "MIT"
 repository = "https://github.com/ur0/lolcat"
