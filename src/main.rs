@@ -13,14 +13,16 @@ use utf8_chars::BufReadCharsExt;
 
 mod cat;
 
+const UTF_8_REPLACEMENT: char = '\u{FFFD}';
+
 fn main() {
     let mut filename: String = "".to_string();
     let mut c = parse_cli_args(&mut filename);
 
-    if filename == "" {
+    if filename.is_empty() {
         let stdin = io::stdin(); // For lifetime reasons
         cat::print_chars_lol(
-            BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()),
+            BufReader::new(stdin.lock()).chars().map(|r| r.unwrap_or(UTF_8_REPLACEMENT)),
             &mut c,
             true,
         );
@@ -32,7 +34,7 @@ fn main() {
 fn lolcat_file(filename: &str, c: &mut cat::Control) -> Result<(), io::Error> {
     let f = File::open(filename)?;
     let file = BufReader::new(&f);
-    cat::print_lines_lol(file.lines().map(|r| r.unwrap()), c);
+    cat::print_lines_lol(file.lines().map(|r| r.unwrap_or(UTF_8_REPLACEMENT.to_string())), c);
     Ok(())
 }
 
