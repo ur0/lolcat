@@ -1,12 +1,9 @@
-extern crate rand;
-
 use rand::Rng;
 
 use std::thread::sleep;
 use std::time::Duration;
 
-use std::io::stdout;
-use std::io::Write;
+use std::io::{Write, stdout};
 
 // A struct to contain info we need to print with every character
 pub struct Control {
@@ -84,10 +81,12 @@ pub fn print_chars_lol<I: Iterator<Item = char>>(
                                         iter.next().expect("CSI escape sequence did not terminate");
                                     print!("{}", escape_sequence_character);
                                     match escape_sequence_character {
-                            '\x20' ..= '\x2F' => continue,
-                            '\x40' ..= '\x7E' => break,
-                            _ => panic!("CSI escape sequence terminated with an incorrect value"),
-                            }
+                                        '\x20'..='\x2F' => continue,
+                                        '\x40'..='\x7E' => break,
+                                        _ => panic!(
+                                            "CSI escape sequence terminated with an incorrect value"
+                                        ),
+                                    }
                                 }
                                 break;
                             }

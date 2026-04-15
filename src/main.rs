@@ -1,13 +1,6 @@
-extern crate clap;
-extern crate rand;
-extern crate utf8_chars;
-
 use clap::{App, Arg};
 use std::fs::File;
-use std::io;
-use std::io::BufRead;
-use std::io::BufReader;
-use std::io::IsTerminal;
+use std::io::{self, BufRead, BufReader, IsTerminal};
 use std::num::ParseIntError;
 use utf8_chars::BufReadCharsExt;
 
@@ -17,7 +10,7 @@ fn main() {
     let mut filename: String = "".to_string();
     let mut c = parse_cli_args(&mut filename);
 
-    if filename == "" {
+    if filename.is_empty() {
         let stdin = io::stdin(); // For lifetime reasons
         cat::print_chars_lol(
             BufReader::new(stdin.lock()).chars().map(|r| r.unwrap()),
@@ -55,10 +48,9 @@ fn parse_cli_args(filename: &mut String) -> cat::Control {
 
     let print_color = matches.is_present("force-color") || std::io::stdout().is_terminal();
 
-	// If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
-    let terminal_width: Result<u16, ParseIntError> = matches.value_of("width")
-        .unwrap_or("")
-        .parse();
+    // If the terminal width is passed, use that. Else, get the size of the terminal. Else, use 0 (no overflow)
+    let terminal_width: Result<u16, ParseIntError> =
+        matches.value_of("width").unwrap_or("").parse();
     let terminal_width: u16 = match terminal_width {
         Ok(width) => width,
         Err(_) => {
